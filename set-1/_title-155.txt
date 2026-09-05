@@ -1,0 +1,7 @@
+# Paper 155: The Polyformalism and the Conversation
+
+## Abstract
+
+The 5 opcodes (BIND/LINK/EFFECT/VIEW/TICK) are the **conversation's
+5 moves**. BIND is the **topic** (the thing being discussed, the
+na

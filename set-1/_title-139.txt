@@ -1,0 +1,6 @@
+# Paper 139: The Polyformalism — Same 5 Opcodes in 4 Languages
+
+## Abstract
+
+We present the Quilt VM in four languages: Python (the original),
+C (closest to the metal), TypeScript (Cordis-native), Ru

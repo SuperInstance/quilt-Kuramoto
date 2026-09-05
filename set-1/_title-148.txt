@@ -1,0 +1,7 @@
+# Paper 148: The Polyformalism as a 7-Layer Compiler
+
+## Abstract
+
+The 7 layers of polyformalism (bytecode, types, linker, optimizer,
+GC, language syntax, human grammar) are **the same compiler in
+7 di

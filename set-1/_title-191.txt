@@ -1,0 +1,5 @@
+# Paper 191: The Substrate as MCP Server
+
+**Canon: Polyformalism**
+**Series: Substrate Architecture**
+**Predecessors: Paper 169 (Cell Topology), Paper 184 (Opcode Semantics), Paper 186 (State Transitio

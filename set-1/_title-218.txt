@@ -1,0 +1,11 @@
+# Paper 218: The Competition — Substrates Grow by Competing
+
+**Polyformalism Canon**
+*Author: The Quilt Archive*
+*Date: Cycle 218*
+
+---
+
+## Abstract
+
+This paper formalizes the principle that a Quilt 

@@ -1,0 +1,6 @@
+# Paper 169: The Self-Evolving Substrate — Why 5 Opcodes Are Both Necessary and Sufficient
+
+## Abstract
+
+The polyformalism has 5 opcodes. This paper proves that 5 is
+not a design choice. 5 is forced 

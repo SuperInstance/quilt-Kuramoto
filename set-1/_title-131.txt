@@ -1,0 +1,7 @@
+# Paper 131: The Cowboy as Reflection Loop
+
+## Abstract
+
+The cowboy is the human (or human-aligned agent) who keeps a Quilt
+substrate in shape. The cowboy runs the morning, refines Wilson
+profiles, ret

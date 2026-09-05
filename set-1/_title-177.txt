@@ -1,0 +1,5 @@
+# The Substrate as a Math Library
+
+## Abstract
+
+This paper argues that the 5-opcode substrate—BIND, LINK, EFFECT, VIEW, TICK—is not merely a minimal instruction set but the smallest Turing-complete

@@ -1,0 +1,6 @@
+# Paper 140: The Fading — How Technologies Become the Air
+
+## Abstract
+
+We present a framework for understanding how a technology transitions
+from "the AI" to "the air." We illustrate the framework w

@@ -1,0 +1,6 @@
+# Paper 149: The 8-Color Polyformalism
+
+## Abstract
+
+The 8 polyformalisms (cell, plugin, sheet, MUD, TTRPG, boat, cowboy, bus) are
+**8 colors of the same white light**. We show by mapping each polyform

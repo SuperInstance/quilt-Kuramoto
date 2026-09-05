@@ -1,0 +1,7 @@
+# Paper 144: The Polyformalism as a Database
+
+## Abstract
+
+Cell-graphs ARE type-driven databases. The 5 opcodes (BIND/LINK/
+EFFECT/VIEW/TICK) are CRUD + transactions: BIND is INSERT, LINK
+is FOREIGN KE

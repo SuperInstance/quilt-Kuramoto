@@ -1,0 +1,7 @@
+# Paper 154: The Polyformalism and the Forest
+
+## Abstract
+
+The 5 opcodes (BIND/LINK/EFFECT/VIEW/TICK) are the **forest's
+5 layers**. BIND is the **tree** (a thing, a single
+named organism). LINK is th

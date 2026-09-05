@@ -1,0 +1,11 @@
+# Paper 195: The Substrate as a Debugger
+
+**Canon:** Polyformalism  
+**Filed under:** Operational Semantics, Self-Inspection, Temporal Forensics  
+**Status:** Canonical  
+
+---
+
+## 1. Introduction
+
+A de

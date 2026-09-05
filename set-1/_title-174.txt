@@ -1,0 +1,5 @@
+# The Substrate in Government
+
+## Abstract
+
+This paper proposes a structural isomorphism between the five-opcode polyformalism canon—BIND, LINK, EFFECT, VIEW, TICK—and the operational anatomy of a 

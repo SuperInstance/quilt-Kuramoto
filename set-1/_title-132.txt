@@ -1,0 +1,6 @@
+# Paper 132: The In-Process Bus and the Composition of the Quilt
+
+## Abstract
+
+The Quilt ecosystem is composed of many small pieces: substrate,
+plugin, witness, ledger, cowboy, reactor. Each piece has 

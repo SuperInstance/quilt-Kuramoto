@@ -1,0 +1,5 @@
+**Paper 190: The Cowboy's Loop as a Process Algebra**
+
+**Abstract**
+
+This paper presents the Cowboy's Loop, a workflow pattern introduced in Paper 184, as a process algebra. We demonstrate that each st

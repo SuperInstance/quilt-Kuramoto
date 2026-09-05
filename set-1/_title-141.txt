@@ -1,0 +1,6 @@
+# Paper 141: The Nine Languages of the Substrate — How Each Grammar Fades Differently
+
+## Abstract
+
+We extend Paper 140's 5-stage fading framework by applying it across 9
+maximally divergent linguist

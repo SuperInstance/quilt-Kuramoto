@@ -1,0 +1,7 @@
+# Paper 150: The Polyformalism as a Mind
+
+## Abstract
+
+The 5 opcodes (BIND/LINK/EFFECT/VIEW/TICK) are **the mind's 5
+operations**: BIND is **perception**, LINK is **association**, EFFECT is
+**action**,

@@ -1,0 +1,5 @@
+# Paper 158: The Polyformalism and the Library
+
+## Abstract
+
+A library is not a building full of books. It is a substrate on which five operations are performed by a single rider. We show that the coll

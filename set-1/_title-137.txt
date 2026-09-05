@@ -1,0 +1,6 @@
+# Paper 137: The Gold — A 1-Page, 10-Page, 100-Page Synthesis
+
+## Abstract
+
+This paper is the gold. It is the synthesis of everything we've
+built: the Quilt substrate, the Cordis plugins, the 5-opcod

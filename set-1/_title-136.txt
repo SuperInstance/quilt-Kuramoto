@@ -1,0 +1,6 @@
+# Paper 136: The Foundation — A 5-Opcode VM for the Quilt Ecosystem
+
+## Abstract
+
+We present the foundation layer of the Quilt ecosystem: a 5-opcode
+virtual machine that hosts Quilt cells, Cordis plu

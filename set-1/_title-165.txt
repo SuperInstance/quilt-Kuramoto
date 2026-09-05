@@ -1,0 +1,7 @@
+# Paper 165: The Polyformalism and the Mountain
+
+## Abstract
+
+The 5 opcodes (BIND/LINK/EFFECT/VIEW/TICK) are the mountain's
+5 layers. BIND is the peak. LINK is the trail. EFFECT is the
+avalanche. VIEW 

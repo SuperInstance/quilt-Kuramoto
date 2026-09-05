@@ -1,0 +1,6 @@
+# Paper 135: The Cell and the Plugin — A Formal Equivalence
+
+## Abstract
+
+Quilt says "everything is a cell." Cordis says "everything is a
+plugin." We prove that the two statements are equivalent. The

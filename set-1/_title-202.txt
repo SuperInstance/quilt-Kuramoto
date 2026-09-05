@@ -1,0 +1,11 @@
+# Paper 202: The 5 Opcodes as a Cellular Operating System
+
+**Polyformalism Canon — Technical Series**
+
+*Revision 2.1 — Ratified by the Cowboy Council*
+
+---
+
+## Abstract
+
+This paper formalizes the c

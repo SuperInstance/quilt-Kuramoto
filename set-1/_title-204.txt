@@ -1,0 +1,6 @@
+# The Bridge to CudaClaw: A Three-Sibling Architecture
+
+**Polyformalism Canon Paper No. 204**
+
+> *The unit of foundation is the cell, not the model. The
+> cell has a body, a tier, a fiber, a constraint

@@ -1,0 +1,3 @@
+**Paper 196: The 5 Opcodes as a Programming Language**
+
+In the vast expanse of programming languages, there exists a hidden gem that has been overlooked by the masses. The 5 opcodes - BIND, LINK, EFFEC

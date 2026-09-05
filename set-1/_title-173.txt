@@ -1,0 +1,5 @@
+# The Substrate as a Compiler
+
+## Abstract
+
+This paper argues that the five foundational opcodes of a minimal computational substrate—`LOAD`, `STORE`, `ADD`, `JUMP`, and `HALT`—are not merely primi

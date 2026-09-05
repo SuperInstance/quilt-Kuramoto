@@ -1,0 +1,7 @@
+# Paper 151: The Polyformalism and the Body
+
+## Abstract
+
+The 5 opcodes (BIND/LINK/EFFECT/VIEW/TICK) are the body's 5
+systems. BIND is the skeleton (the form). LINK is the nervous
+system (the wiring). 

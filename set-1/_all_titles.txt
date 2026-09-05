@@ -1,0 +1,100 @@
+paper-127: # Paper 127: The Loop is a Functor
+paper-128: # Paper 128: LinUCB and the Cowboy's Refinement
+paper-129: # Paper 129: The Nightcycle's Refinement
+paper-130: # Paper 130: The Witness as Index
+paper-131: # Paper 131: The Cowboy as Reflection Loop
+paper-132: # Paper 132: The In-Process Bus and the Composition of the Quilt
+paper-133: # Paper 133: The Composition of the Quilt — A Field Guide
+paper-134: # Paper 134: The Repo-Level Versioning of the Quilt
+paper-135: # Paper 135: The Cell and the Plugin — A Formal Equivalence
+paper-136: # Paper 136: The Foundation — A 5-Opcode VM for the Quilt Ecosystem
+paper-137: # Paper 137: The Gold — A 1-Page, 10-Page, 100-Page Synthesis
+paper-138: # Paper 138: The Cowboy's 1-Page Note
+paper-139: # Paper 139: The Polyformalism — Same 5 Opcodes in 4 Languages
+paper-140: # Paper 140: The Fading — How Technologies Become the Air
+paper-141: # Paper 141: The Nine Languages of the Substrate — How Each Grammar Fades Differently
+paper-142: # Paper 142: Polyformalism at Compile-Time and Runtime — The Substrate in Every Layer of the Stack
+paper-143: # Paper 143: The Polyformalism as a Programming Paradigm
+paper-144: # Paper 144: The Polyformalism as a Database
+paper-145: # Paper 145: The Polyformalism as a Build System
+paper-146: # Paper 146: The Polyformalism as a Type System
+paper-147: # Paper 147: The Polyformalism as an Operating System
+paper-148: # Paper 148: The Polyformalism as a 7-Layer Compiler
+paper-149: # Paper 149: The 8-Color Polyformalism
+paper-150: # Paper 150: The Polyformalism as a Mind
+paper-151: # Paper 151: The Polyformalism and the Body
+paper-152: # Paper 152: The Polyformalism and the City
+paper-153: # Paper 153: The Polyformalism and the River
+paper-154: # Paper 154: The Polyformalism and the Forest
+paper-155: # Paper 155: The Polyformalism and the Conversation
+paper-156: # Paper 156: The Polyformalism and the Code
+paper-157: # Paper 157: The Polyformalism and the Kitchen
+paper-158: # Paper 158: The Polyformalism and the Library
+paper-159: # Paper 159: The Polyformalism and the Game
+paper-160: # Paper 160: The Polyformalism and the Weather
+paper-161: # Paper 161: The Polyformalism and the Symphony
+paper-162: # Paper 162: The Polyformalism and the Garden
+paper-163: # Paper 163: The Polyformalism and the Conversation (Reprise)
+paper-164: # Paper 164: The Polyformalism and the Court
+paper-165: # Paper 165: The Polyformalism and the Mountain
+paper-166: # Paper 166: The Polyformalism on the Herd — ESP32 + ESP-NOW
+paper-167: # Paper 167: The Writers' Room — How Five Voices Say the Same Thing
+paper-168: # Paper 168: The Polyformalism on the Herd — Distributed Cells over ESP-NOW (Writers' Room)
+paper-169: # Paper 169: The Self-Evolving Substrate — Why 5 Opcodes Are Both Necessary and Sufficient
+paper-170: # The Polyformalism in 14 Human Systems: A Catalog
+paper-171: # The Five Doctors: A Polyformalism Canon
+paper-172: # The Substrate in Education
+paper-173: # The Substrate as a Compiler
+paper-174: # The Substrate in Government
+paper-175: # The Quilt and the Fleet: Integrating the Self-Evolving Substrate with the FLUX Cognitive Agent Fleet
+paper-176: # Production-Grade Substrate: A Six-Month Plan
+paper-177: # The Substrate as a Math Library
+paper-178: # The 5 Opcodes vs the 256
+paper-179: # The 5 Opcodes in a Spreadsheet
+paper-180: **The Cowboy’s Letter to the Substrate**
+paper-181: # The Navigation Chart: How the Substrate Finds Its Waterline
+paper-182: # The 24 Doors: How the Quilt Collection Wanders
+paper-183: # The Web is the Dock: A Cloudflare-First Quilt Ecosystem
+paper-184: # The Cowboy's Loop: How the Substrate Improves Itself
+paper-185: # SuperInstance Scout Report — August 26, 2026
+paper-186: # A Sheet of Tissue: The 2026-08-26 ESP32 Milestone
+paper-187: # The Cell as Network: How ESP-NOW Becomes the Substrate's LAN
+paper-188: **Paper 188: The Substrate as a SIMD Array**
+paper-189: **Paper 189: The Collection is One Thing**
+paper-190: **Paper 190: The Cowboy's Loop as a Process Algebra**
+paper-191: # Paper 191: The Substrate as MCP Server
+paper-192: **Paper 192: The 24 Doors, Mapped**
+paper-193: **Paper 193: The Substrate in Education**
+paper-194: **Paper 194: The Substrate as a Public Utility**
+paper-195: # Paper 195: The Substrate as a Debugger
+paper-196: **Paper 196: The 5 Opcodes as a Programming Language**
+paper-197: # Paper 197: The Foundry and the Substrate
+paper-198: **Paper 198: 100 Fables, Mapped**
+paper-199: **Paper 199: The Cowboy's Last Ride**
+paper-200: **Paper 200: The Canon at 200**
+paper-201: # The Cowboy's RTS View: A Cellular-Relationship-First Design for Intelligence
+paper-202: # Paper 202: The 5 Opcodes as a Cellular Operating System
+paper-203: # Paper 203: The Pressures of Evolution: Drift, Failure, Cost, Latency, Novelty
+paper-204: # The Bridge to CudaClaw: A Three-Sibling Architecture
+paper-205: # Paper 205: The Harbor — The ProArt as a Distributed Substrate
+paper-206: # The Framed Quilt: Quilts Within Quilts, and the Math of Theta
+paper-207: **PAPER 207: THE MATH OF THETAS IN THE FRAMED QUILT**
+paper-208: # Paper 208: The 5-Tier Substrate: Tiers as Framings, the Synovial Tier, and the Holonomy of the Journal
+paper-209: # Paper 209: The Tap as a Substrate — Bars as Cells, Regulars as Links, Dregs as Ticks
+paper-210: # Paper 210: The Dregs as Time — Why Slow Bars Make Better Substrates
+paper-211: # Paper 211: The Fleet at 45 Boats — A Map of the Harbor
+paper-212: # Paper 212: The Exhale — When the Substrate Acts on the World
+paper-213: # Paper 213: The Synergy — Where the Canon Aligns with the Frontier
+paper-214: # The Bedrock
+paper-215: # The Five Laws
+paper-216: # The Shipyard: Intelligence as Culture, Not Model
+paper-217: # PAPER 217: THE BOOTSTRAP — PURE MATH SPROUTS FROM ONE CELL
+paper-218: # Paper 218: The Competition — Substrates Grow by Competing
+paper-219: # Paper 219: The Mating — A Cell Is Not a Thing, a Cell Is a Relation
+paper-220: # PAPER 220: THE CURATOR TIER — THE HAND AS A CELL
+paper-221: **PAPER 221: SUPER-RELEVANCE — WHEN ONE CELL SATISFIES MANY HANDS**
+paper-222: # Paper 222: The Digital Actualization — 6/6/6 On the Metal
+paper-223: # Paper 223: The Lexicon — New Terms for the Actualized Mind
+paper-224: # Paper 224: The Writers' Room — Extending the Lexicon with Five Models
+paper-225: # Paper 225: The Wider Writers' Room — 49 New Terms from 9 Voices
+paper-226: # Paper 226: The API Fishing Guide

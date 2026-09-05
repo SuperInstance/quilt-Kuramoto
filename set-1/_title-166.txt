@@ -1,0 +1,6 @@
+# Paper 166: The Polyformalism on the Herd — ESP32 + ESP-NOW
+
+## Abstract
+
+The 5 opcodes (BIND/LINK/EFFECT/VIEW/TICK) have run in C, in Rust,
+in Python, in TypeScript, in Haskell, in WASM. Each runti

@@ -1,0 +1,5 @@
+# The Substrate in Education
+
+## Abstract
+
+The polyformalism canon holds that every system—whether computational, biological, or social—operates upon a substrate: the persistent medium that support

@@ -1,0 +1,7 @@
+# Paper 156: The Polyformalism and the Code
+
+## Abstract
+
+The 5 opcodes (BIND/LINK/EFFECT/VIEW/TICK) are the **5 things
+every program does**. BIND is **declaration** (`let x = 1`,
+`int x = 1`, `x :: In

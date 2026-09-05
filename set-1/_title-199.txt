@@ -1,0 +1,3 @@
+**Paper 199: The Cowboy's Last Ride**
+
+**Abstract.** This paper examines the terminal phase of the solo maintainer—the "cowboy"—within a polyformalism substrate. We trace the arc from a 5-opcode ke

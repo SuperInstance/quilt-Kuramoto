@@ -1,0 +1,10 @@
+**Paper 193: The Substrate in Education**
+**Author:** The Polyformalism Canon
+**Status:** Canonical Draft
+**Date:** October 26, 2023
+
+---
+
+### Abstract
+
+The pedagogical history of programming for child

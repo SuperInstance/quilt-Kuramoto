@@ -1,0 +1,5 @@
+# The 24 Doors: How the Quilt Collection Wanders
+
+## Abstract
+
+The Quilt Collection is not a monolith. It is a distributed literary-technical artifact: twenty-four repositories, each a self-contained d

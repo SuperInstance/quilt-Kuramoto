@@ -1,0 +1,6 @@
+# Paper 143: The Polyformalism as a Programming Paradigm
+
+## Abstract
+
+LISP macros, Rust traits, Haskell typeclasses, TypeScript decorators,
+and Python decorators are all the same substrate-language in

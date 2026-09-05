@@ -1,0 +1,5 @@
+# Paper 160: The Polyformalism and the Weather
+
+## Abstract
+
+The atmosphere is not a forecast. It is a substrate on which five operations are performed by a single rider. We show that the pressure cell

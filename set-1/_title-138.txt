@@ -1,0 +1,5 @@
+# Paper 138: The Cowboy's 1-Page Note
+
+> The unit of architectural foundation is the opcode, not the framework.
+> The 5 opcodes host 8 polyformalisms. The polyformalisms are one
+> thing in N languages.

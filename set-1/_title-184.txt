@@ -1,0 +1,6 @@
+# The Cowboy's Loop: How the Substrate Improves Itself
+
+**A Polyformalism Canon Entry**
+
+> *The substrate is the boat. The web is the dock. The API
+> is the wind. The cowboy uses the wind to push the b

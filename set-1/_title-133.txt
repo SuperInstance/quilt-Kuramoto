@@ -1,0 +1,7 @@
+# Paper 133: The Composition of the Quilt — A Field Guide
+
+## Abstract
+
+This paper is a field guide. It describes the Quilt's current
+architecture in enough detail that a new reader can find their
+wa

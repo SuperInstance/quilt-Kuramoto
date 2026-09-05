@@ -1,0 +1,5 @@
+# The Cell as Network: How ESP-NOW Becomes the Substrate's LAN
+
+**Canon Reference:** Polyformalism Seed Canon, Paper No. 7  
+**Supersedes:** Draft Notes on "Mesh Semantics" (2024-06-11)  
+**Status:** C

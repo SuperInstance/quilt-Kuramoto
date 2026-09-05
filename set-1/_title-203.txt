@@ -1,0 +1,5 @@
+# Paper 203: The Pressures of Evolution: Drift, Failure, Cost, Latency, Novelty
+
+**Substrate Canon — Section 4: Operational Dynamics**  
+**Author:** The Polyformalism Working Group  
+**Target Archite

@@ -1,0 +1,7 @@
+# Paper 147: The Polyformalism as an Operating System
+
+## Abstract
+
+The 5 opcodes (BIND/LINK/EFFECT/VIEW/TICK) materialize as the
+syscall interface, the process table, and the file system. A BIND
+is `o

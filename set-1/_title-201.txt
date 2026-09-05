@@ -1,0 +1,6 @@
+# The Cowboy's RTS View: A Cellular-Relationship-First Design for Intelligence
+
+**Polyformalism Canon Paper No. 201**
+
+> *The unit of foundation is the cell, not the model. A large
+> language model in 

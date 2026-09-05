@@ -1,0 +1,5 @@
+# The 5 Opcodes in a Spreadsheet
+
+## Abstract
+
+Spreadsheets are often described as visual programming environments, yet their computational essence is rarely examined through the lens of instruction se

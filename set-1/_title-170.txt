@@ -1,0 +1,5 @@
+# The Polyformalism in 14 Human Systems: A Catalog
+
+## Introduction
+
+Polyformalism is the doctrine that a single, fixed set of operational primitives—here named BIND, LINK, EFFECT, VIEW, and TICK—r

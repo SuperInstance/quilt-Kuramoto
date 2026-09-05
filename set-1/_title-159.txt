@@ -1,0 +1,5 @@
+# Paper 159: The Polyformalism and the Game
+
+## Abstract
+
+A game is not a rulebook. It is a substrate on which five operations are performed by a single rider. We show that the character, the relations

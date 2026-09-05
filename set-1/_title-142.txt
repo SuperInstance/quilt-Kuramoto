@@ -1,0 +1,6 @@
+# Paper 142: Polyformalism at Compile-Time and Runtime — The Substrate in Every Layer of the Stack
+
+## Abstract
+
+We extend Papers 139–141 (the polyformalism of the 5 opcodes) by
+showing that the op
