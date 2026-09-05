@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Integrity — The Negative Space of the Self</title>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --bg-soft: #15151f;
+    --fg: #e0e0e8;
+    --fg-dim: #8a8a9a;
+    --accent: #6ad4ff;
+    --warm: #ff6a3a;
+    --cool: #3a6aff;
+    --border: #2a2a3a;
+    --leak: #ff3a6a;
+    --integrity: #3aff8a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', -apple-system, system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    min-height: 100vh;
+    padding: 2rem 1rem;
+  }
+  .container { max-width: 1200px; margin: 0 auto; }
+  h1 {
+    font-size: 2.2rem;
+    font-weight: 200;
+    letter-spacing: -0.04em;
+    margin-bottom: 0.4rem;
+  }
+  h1 .accent { color: var(--accent); }
+  .tagline {
+    color: var(--fg-dim);
+    font-size: 0.95rem;
+    font-weight: 300;
+    margin-bottom: 2rem;
+    font-style: italic;
+  }
+
+  /* Big integrity dial */
+  .integrity-meter {
+    padding: 2rem;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    text-align: center;
+  }
+  .integrity-meter .value {
+    font-size: 5rem;
+    font-weight: 100;
+    color: var(--integrity);
+    font-family: monospace;
+    transition: color 0.5s;
+  }
+  .integrity-meter .value.low { color: var(--leak); }
+  .integrity-meter .value.mid { color: var(--warm); }
+  .integrity-meter .label {
+    font-size: 0.85rem;
+    color: var(--fg-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    margin-top: 0.5rem;
+  }
+  .integrity-meter .interpretation {
+    margin-top: 1.5rem;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: var(--fg);
+  }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .tab {
+    padding: 0.6rem 1.2rem;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: var(--fg-dim);
+    transition: all 0.2s;
+  }
+  .tab:hover { border-color: var(--accent); color: var(--fg); }
+  .tab.active { background: rgba(106,212,255,0.1); border-color: var(--accent); color: var(--accent); }
+
+  /* Three columns: model, body, game */
+  .streams {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .stream {
+    padding: 1.2rem;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+  .stream h3 {
+    font-size: 0.85rem;
+    color: var(--fg-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 1rem;
+    font-weight: 500;
+  }
+  .stream .row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    gap: 0.6rem;
+  }
+  .stream .row label {
+    width: 90px;
+    font-size: 0.8rem;
+    color: var(--fg);
+  }
+  .stream .bar {
+    flex: 1;
+    height: 8px;
+    background: var(--bg);
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+  }
+  .stream .bar-fill {
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    background: var(--accent);
+    transition: width 0.3s;
+  }
+  .stream .bar-fill.claimed { background: var(--warm); }
+  .stream .bar-fill.actual { background: var(--integrity); }
+  .stream .bar-fill.ground { background: var(--cool); }
+  .stream .row .value {
+    width: 50px;
+    text-align: right;
+    font-size: 0.75rem;
+    font-family: monospace;
+    color: var(--fg);
+  }
+  .stream .input-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.5rem;
+  }
+  .stream .input-row label {
+    width: 90px;
+    font-size: 0.8rem;
+  }
+  .stream .input-row input[type=range] {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+  }
+  .stream .input-row input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+  }
+
+  /* Game state inputs */
+  .game-inputs {
+    padding: 1.2rem;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: 1.5rem;
+  }
+  .game-inputs h3 {
+    font-size: 0.85rem;
+    color: var(--fg-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 1rem;
+    font-weight: 500;
+  }
+
+  /* Ablation panel */
+  .ablation {
+    padding: 1.2rem;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: 1.5rem;
+  }
+  .ablation h3 {
+    font-size: 0.85rem;
+    color: var(--fg-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 1rem;
+    font-weight: 500;
+  }
+  .ablation-row {
+    display: grid;
+    grid-template-columns: 140px 1fr 100px 80px;
+    gap: 0.5rem;
+    align-items: center;
+    margin-bottom: 0.4rem;
+    font-size: 0.8rem;
+  }
+  .ablation-row .sensor { color: var(--fg); }
+  .ablation-row .bar {
+    height: 8px;
+    background: var(--bg);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+  }
+  .ablation-row .bar-fill {
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    transition: width 0.3s;
+  }
+  .ablation-row .pct {
+    color: var(--fg-dim);
+    font-family: monospace;
+    text-align: right;
+  }
+  .ablation-row .verdict {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    text-align: center;
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+  }
+  .verdict.REDUNDANT { color: var(--cool); background: rgba(58, 106, 255, 0.15); }
+  .verdict.INFORMATIONAL { color: var(--warm); background: rgba(255, 106, 58, 0.15); }
+  .verdict.CRITICAL { color: var(--leak); background: rgba(255, 58, 106, 0.15); }
+
+  /* Leaks panel */
+  .leaks-panel {
+    padding: 1.2rem;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: 1.5rem;
+  }
+  .leaks-panel h3 {
+    font-size: 0.85rem;
+    color: var(--fg-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 1rem;
+    font-weight: 500;
+  }
+  .leak {
+    padding: 0.8rem 1rem;
+    background: var(--bg);
+    border-left: 3px solid var(--leak);
+    border-radius: 4px;
+    margin-bottom: 0.6rem;
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+  .leak.over { border-left-color: var(--warm); }
+  .leak.under { border-left-color: var(--cool); }
+  .leak .name {
+    color: var(--accent);
+    font-weight: 500;
+    margin-bottom: 0.3rem;
+    text-transform: capitalize;
+  }
+  .leak .interp { color: var(--fg); }
+  .leak .claimed { color: var(--warm); }
+  .leak .actual { color: var(--integrity); }
+  .no-leaks {
+    padding: 1.2rem;
+    background: rgba(58, 255, 138, 0.1);
+    border-left: 3px solid var(--integrity);
+    border-radius: 4px;
+    color: var(--integrity);
+    font-size: 0.9rem;
+  }
+
+  .note {
+    padding: 1rem;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--fg-dim);
+    font-size: 0.85rem;
+    line-height: 1.6;
+  }
+  .note strong { color: var(--fg); }
+  .note a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>The Negative <span class="accent">Space</span></h1>
+  <p class="tagline">A wearable + a known game + a back-trading ledger = an audit of the self.<br>
+  The model, the body, and the game must balance. When they don't, the leak is the lesson.</p>
+
+  <!-- BIG INTEGRITY METER -->
+  <div class="integrity-meter">
+    <div class="value" id="integrity-value">0.85</div>
+    <div class="label">INTEGRITY</div>
+    <div class="interpretation" id="interpretation">The model and the body are aligned. The player is in integrity.</div>
+  </div>
+
+  <!-- GAME STATE -->
+  <div class="game-inputs">
+    <h3>Game State (ground truth)</h3>
+    <div class="input-row">
+      <label>score</label>
+      <input type="range" id="score" min="0" max="2000" value="400" oninput="update()">
+      <span class="value" id="score-v">400</span>
+    </div>
+    <div class="input-row">
+      <label>accuracy</label>
+      <input type="range" id="accuracy" min="0" max="100" value="85" oninput="update()">
+      <span class="value" id="accuracy-v">85%</span>
+    </div>
+    <div class="input-row">
+      <label>errors</label>
+      <input type="range" id="errors" min="0" max="100" value="20" oninput="update()">
+      <span class="value" id="errors-v">20</span>
+    </div>
+    <div class="input-row">
+      <label>actions</label>
+      <input type="range" id="actions" min="0" max="500" value="150" oninput="update()">
+      <span class="value" id="actions-v">150</span>
+    </div>
+    <div class="input-row">
+      <label>duration (min)</label>
+      <input type="range" id="duration" min="0" max="60" value="10" oninput="update()">
+      <span class="value" id="duration-v">10</span>
+    </div>
+    <div class="input-row">
+      <label>reaction time (ms)</label>
+      <input type="range" id="rt" min="100" max="800" value="220" oninput="update()">
+      <span class="value" id="rt-v">220</span>
+    </div>
+  </div>
+
+  <!-- TABS for streams -->
+  <div class="tabs">
+    <div class="tab active" data-tab="model">Your Model (claimed)</div>
+    <div class="tab" data-tab="body">Your Body (actual)</div>
+    <div class="tab" data-tab="game">Game Stream (ground truth)</div>
+  </div>
+
+  <!-- THREE STREAMS -->
+  <div class="streams">
+    <!-- MODEL -->
+    <div class="stream" id="stream-model">
+      <h3>Your model (claimed)</h3>
+      <div class="row">
+        <label>focus</label>
+        <div class="bar"><div class="bar-fill claimed" id="m_focus" style="width:60%"></div></div>
+        <span class="value" id="m_focus_v">60%</span>
+      </div>
+      <div class="row">
+        <label>calm</label>
+        <div class="bar"><div class="bar-fill claimed" id="m_calm" style="width:60%"></div></div>
+        <span class="value" id="m_calm_v">60%</span>
+      </div>
+      <div class="row">
+        <label>effort</label>
+        <div class="bar"><div class="bar-fill claimed" id="m_effort" style="width:60%"></div></div>
+        <span class="value" id="m_effort_v">60%</span>
+      </div>
+      <div class="row">
+        <label>fatigue</label>
+        <div class="bar"><div class="bar-fill claimed" id="m_fatigue" style="width:25%"></div></div>
+        <span class="value" id="m_fatigue_v">25%</span>
+      </div>
+      <div class="row">
+        <label>will win</label>
+        <div class="bar"><div class="bar-fill claimed" id="m_win" style="width:60%"></div></div>
+        <span class="value" id="m_win_v">60%</span>
+      </div>
+      <div class="row">
+        <label>can sustain</label>
+        <div class="bar"><div class="bar-fill claimed" id="m_dur" style="width:70%"></div></div>
+        <span class="value" id="m_dur_v">70%</span>
+      </div>
+    </div>
+
+    <!-- BODY -->
+    <div class="stream" id="stream-body">
+      <h3>Your body (actual)</h3>
+      <div class="input-row">
+        <label>eeg_alpha</label>
+        <input type="range" id="b_alpha" min="0" max="100" value="60" oninput="update()">
+        <span class="value" id="b_alpha_v">60%</span>
+      </div>
+      <div class="input-row">
+        <label>eeg_beta</label>
+        <input type="range" id="b_beta" min="0" max="100" value="35" oninput="update()">
+        <span class="value" id="b_beta_v">35%</span>
+      </div>
+      <div class="input-row">
+        <label>eeg_theta</label>
+        <input type="range" id="b_theta" min="0" max="100" value="50" oninput="update()">
+        <span class="value" id="b_theta_v">50%</span>
+      </div>
+      <div class="input-row">
+        <label>heart_rate</label>
+        <input type="range" id="b_hr" min="0" max="100" value="45" oninput="update()">
+        <span class="value" id="b_hr_v">45%</span>
+      </div>
+      <div class="input-row">
+        <label>gsr</label>
+        <input type="range" id="b_gsr" min="0" max="100" value="40" oninput="update()">
+        <span class="value" id="b_gsr_v">40%</span>
+      </div>
+      <div class="input-row">
+        <label>posture</label>
+        <input type="range" id="b_posture" min="0" max="100" value="35" oninput="update()">
+        <span class="value" id="b_posture_v">35%</span>
+      </div>
+    </div>
+
+    <!-- GAME STREAM (read-only) -->
+    <div class="stream" id="stream-game">
+      <h3>Game stream (ground truth)</h3>
+      <div class="row">
+        <label>score</label>
+        <div class="bar"><div class="bar-fill ground" id="g_score" style="width:20%"></div></div>
+        <span class="value" id="g_score_v">400</span>
+      </div>
+      <div class="row">
+        <label>accuracy</label>
+        <div class="bar"><div class="bar-fill ground" id="g_acc" style="width:85%"></div></div>
+        <span class="value" id="g_acc_v">85%</span>
+      </div>
+      <div class="row">
+        <label>error rate</label>
+        <div class="bar"><div class="bar-fill ground" id="g_err" style="width:13%"></div></div>
+        <span class="value" id="g_err_v">13%</span>
+      </div>
+      <div class="row">
+        <label>reaction time</label>
+        <div class="bar"><div class="bar-fill ground" id="g_rt" style="width:22%"></div></div>
+        <span class="value" id="g_rt_v">220ms</span>
+      </div>
+      <div class="row">
+        <label>time on task</label>
+        <div class="bar"><div class="bar-fill ground" id="g_time" style="width:17%"></div></div>
+        <span class="value" id="g_time_v">10 min</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ABLATION -->
+  <div class="ablation">
+    <h3>Decomposition — Ablate each sensor, measure the residual</h3>
+    <div id="ablation-rows"></div>
+  </div>
+
+  <!-- LEAKS -->
+  <div class="leaks-panel">
+    <h3>Negative Space — leaks in the double-entry ledger</h3>
+    <div id="leaks-list"></div>
+  </div>
+
+  <div class="note">
+    <strong>How to play:</strong> Adjust the sliders for the game state and your body readings.
+    The "Your model" is what you <em>say</em> about yourself. The "Your body" is the wearable.
+    The "Game stream" is the ground truth. The integrity score is the
+    audit of all three. The leaks below are where the model, body, and
+    game disagree. <br><br>
+    <strong>Try this experiment:</strong>
+    <ol style="margin-top: 0.5rem; padding-left: 1.5rem;">
+      <li>Set body eeg_beta=80, eeg_alpha=20, HR=70, GSR=80. You're physiologically stressed.</li>
+      <li>Set model focus=80, calm=80. You're claiming focus and calm.</li>
+      <li>Watch the integrity crash to ~0.65 and the leaks explode.</li>
+      <li>Now move model focus=40, calm=30. The leaks shrink; integrity rises.</li>
+    </ol>
+    The truth is, the model can lie. The body can't. The game can't. <br><br>
+    <strong>F140 — The negative space is the set of leaks.</strong> See the
+    <a href="https://github.com/SuperInstance/AI-Writings/blob/master/seed-canon/papers/paper-450.md">paper</a>
+    and the
+    <a href="https://github.com/SuperInstance/quilt-cowboy/blob/master/negative_space_full.py">prototype</a>.
+  </div>
+</div>
+
+<script>
+// === JS implementation of the pipeline (in browser) ===
+
+// Body graph edges (subset of the Python version)
+const EDGES = [
+  ["eeg_alpha", "eeg_beta",     0.6, -1],
+  ["eeg_beta",  "heart_rate",   0.5, +1],
+  ["heart_rate","gsr",          0.4, +1],
+  ["eeg_beta",  "gsr",          0.3, +1],
+  ["eeg_beta",  "posture_tension", 0.4, +1],
+  ["eeg_alpha", "eeg_theta",    0.5, +1],
+  ["eeg_theta", "eeg_alpha",    0.5, +1],
+  ["eeg_alpha", "blink_rate",   0.2, +1],
+  ["posture_tension", "heart_rate", 0.2, +1],
+  ["gsr", "skin_temp",          -0.2, +1],
+];
+
+const SENSOR_NAMES = [
+  "eeg_alpha", "eeg_beta", "eeg_gamma", "eeg_theta", "eeg_delta",
+  "heart_rate", "heart_rate_var", "accel_x", "accel_y", "accel_z",
+  "gsr", "skin_temp", "blink_rate", "voice_freq", "pupil_dilation", "posture_tension"
+];
+
+function inferSensor(target, current) {
+  const parents = EDGES.filter(e => e[0] === target);
+  if (parents.length === 0) return { value: 50, confidence: 0.1 };
+  let weightedSum = 0, weightTotal = 0;
+  for (const [cause, _, gain, sign] of parents) {
+    const cv = current[cause] ?? 50;
+    const contribution = (cv - 50) * gain * sign;
+    weightedSum += contribution;
+    weightTotal += Math.abs(gain);
+  }
+  const value = Math.max(0, Math.min(100, 50 + (weightedSum / Math.max(weightTotal, 0.001)) * weightTotal));
+  const confidence = Math.min(1.0, weightTotal / 2.0);
+  return { value: Math.round(value), confidence };
+}
+
+function ablateAll(current) {
+  return SENSOR_NAMES.map(name => {
+    const { value: inferred, confidence } = inferSensor(name, current);
+    const actual = current[name] ?? 50;
+    const residual = Math.abs(actual - inferred);
+    let verdict = "REDUNDANT";
+    if (residual > 10) verdict = "CRITICAL";
+    else if (residual > 3) verdict = "INFORMATIONAL";
+    return { name, actual, inferred, residual, confidence, verdict };
+  });
+}
+
+function computeLeaks(model, body, game) {
+  const leaks = {};
+  // focus: model.claimed_focus vs body proxy = (beta * 0.6 + alpha * 0.4)
+  const perceived_focus = model.focus;
+  const actual_focus = body.beta * 0.6 + body.alpha * 0.4;
+  const focus_gap = perceived_focus - actual_focus;
+  if (Math.abs(focus_gap) > 10) {
+    leaks.focus = {
+      claimed: `${Math.round(perceived_focus)}%`,
+      actual: `${Math.round(actual_focus)}%`,
+      gap: `${focus_gap > 0 ? '+' : ''}${Math.round(focus_gap)}%`,
+      interpretation: focus_gap > 0
+        ? "OVER-CLAIM: thinking you're more focused than you are"
+        : "UNDER-CLAIM: thinking you're less focused than you are",
+      over: focus_gap > 0
+    };
+  }
+  // calm: model.claimed_calm vs body proxy = 100 - (HR * 0.5 + GSR * 0.5)
+  const perceived_calm = model.calm;
+  const actual_calm = 100 - (body.hr * 0.5 + body.gsr * 0.5);
+  const calm_gap = perceived_calm - actual_calm;
+  if (Math.abs(calm_gap) > 10) {
+    leaks.calm = {
+      claimed: `${Math.round(perceived_calm)}%`,
+      actual: `${Math.round(actual_calm)}%`,
+      gap: `${calm_gap > 0 ? '+' : ''}${Math.round(calm_gap)}%`,
+      interpretation: calm_gap > 0
+        ? "OVER-CLAIM: thinking you're calmer than you are"
+        : "UNDER-CLAIM: thinking you're less calm than you are",
+      over: calm_gap > 0
+    };
+  }
+  // winning: model.claimed_win vs game accuracy
+  const pred_win = model.win;
+  const actual_win = game.accuracy;
+  const win_gap = pred_win - actual_win;
+  if (Math.abs(win_gap) > 15) {
+    leaks.winning = {
+      claimed: `${Math.round(pred_win)}%`,
+      actual: `${Math.round(actual_win)}% (accuracy)`,
+      gap: `${win_gap > 0 ? '+' : ''}${Math.round(win_gap)}%`,
+      interpretation: win_gap > 0
+        ? "OVER-CONFIDENT: predicting you'll win more than the game suggests"
+        : "UNDER-CONFIDENT: predicting you'll win less than the game suggests",
+      over: win_gap > 0
+    };
+  }
+  // sustainability: model.claimed_dur vs fatigue
+  // Fatigue = HR*0.25 + GSR*0.25 + duration_min*1 + error_rate*0.2
+  const fatigue = Math.min(100, body.hr * 0.25 + body.gsr * 0.25 + game.duration * 0.8 + game.errorRate * 0.3);
+  const remaining = Math.max(0, 100 - fatigue);
+  const pred_remaining = model.duration;
+  const dur_gap = pred_remaining - remaining;
+  if (Math.abs(dur_gap) > 5) {
+    leaks.sustainability = {
+      claimed: `${Math.round(pred_remaining)} more min`,
+      actual: `~${Math.round(remaining)} more min (fatigue ${Math.round(fatigue)}/100)`,
+      gap: `${dur_gap > 0 ? '+' : ''}${Math.round(dur_gap)} min`,
+      interpretation: dur_gap > 0
+        ? "OVER-ESTIMATE: thinking you can sustain longer than physiology suggests"
+        : "UNDER-ESTIMATE: you're being more conservative than you need to be",
+      over: dur_gap > 0
+    };
+  }
+  return leaks;
+}
+
+function integrityScore(leaks) {
+  if (!Object.keys(leaks).length) return 1.0;
+  let gapSum = 0;
+  for (const v of Object.values(leaks)) {
+    const g = parseFloat(v.gap);
+    gapSum += Math.abs(g);
+  }
+  return Math.max(0, 1.0 - gapSum / 400);
+}
+
+function interpretIntegrity(score, leaks) {
+  if (score > 0.95) return "The model, the body, and the game are in integrity. The player is whole.";
+  const overclaims = Object.values(leaks).filter(v => v.over).length;
+  const underclaims = Object.values(leaks).filter(v => !v.over).length;
+  if (overclaims >= 2 && overclaims > underclaims) {
+    return "The player is over-claiming. Body and game say one thing; the conscious model says another. Burnout risk.";
+  }
+  if (underclaims >= 2 && underclaims > overclaims) {
+    return "The player is under-claiming. The model is more conservative than the body and game suggest.";
+  }
+  return `Mixed signals — ${Object.keys(leaks).length} gaps between model, body, and game. The player is not in integrity.`;
+}
+
+function update() {
+  // Read model (claimed) - simulate "what the player says"
+  // The model is auto-derived from a "claimed_state" - we let the user adjust
+  // focus, calm, etc. directly (via the displayed bars in the model panel)
+  // but here we read them from the latest model
+  // For simplicity, the model sliders are these (read from input if I had them)
+  // We'll derive model from claimed inputs (we'll add sliders later)
+  const m_focus = parseFloat(document.getElementById('m_focus_v').textContent);
+  const m_calm = parseFloat(document.getElementById('m_calm_v').textContent);
+  const m_effort = parseFloat(document.getElementById('m_effort_v').textContent);
+  const m_fatigue = parseFloat(document.getElementById('m_fatigue_v').textContent);
+  const m_win = parseFloat(document.getElementById('m_win_v').textContent);
+  const m_dur = parseFloat(document.getElementById('m_dur_v').textContent);
+  const model = { focus: m_focus, calm: m_calm, effort: m_effort, fatigue: m_fatigue, win: m_win, duration: m_dur };
+
+  // Read body
+  const b_alpha = parseInt(document.getElementById('b_alpha').value);
+  const b_beta = parseInt(document.getElementById('b_beta').value);
+  const b_theta = parseInt(document.getElementById('b_theta').value);
+  const b_hr = parseInt(document.getElementById('b_hr').value);
+  const b_gsr = parseInt(document.getElementById('b_gsr').value);
+  const b_posture = parseInt(document.getElementById('b_posture').value);
+  const body = {
+    eeg_alpha: b_alpha, eeg_beta: b_beta, eeg_theta: b_theta,
+    eeg_gamma: 50, eeg_delta: 50,
+    heart_rate: b_hr, heart_rate_var: 50,
+    accel_x: 50, accel_y: 50, accel_z: 50,
+    gsr: b_gsr, skin_temp: 50, blink_rate: 50,
+    voice_freq: 50, pupil_dilation: 50, posture_tension: b_posture
+  };
+
+  // Read game
+  const score = parseInt(document.getElementById('score').value);
+  const accuracy = parseInt(document.getElementById('accuracy').value);
+  const errors = parseInt(document.getElementById('errors').value);
+  const actions = parseInt(document.getElementById('actions').value);
+  const duration = parseInt(document.getElementById('duration').value);
+  const rt = parseInt(document.getElementById('rt').value);
+  const errorRate = actions > 0 ? (errors / actions) * 100 : 0;
+  const game = {
+    score, accuracy, errors, actions, duration, reaction_time: rt, errorRate
+  };
+
+  // Update displayed game values
+  document.getElementById('score-v').textContent = score;
+  document.getElementById('accuracy-v').textContent = accuracy + '%';
+  document.getElementById('errors-v').textContent = errors;
+  document.getElementById('actions-v').textContent = actions;
+  document.getElementById('duration-v').textContent = duration;
+  document.getElementById('rt-v').textContent = rt;
+  document.getElementById('b_alpha_v').textContent = b_alpha + '%';
+  document.getElementById('b_beta_v').textContent = b_beta + '%';
+  document.getElementById('b_theta_v').textContent = b_theta + '%';
+  document.getElementById('b_hr_v').textContent = b_hr + '%';
+  document.getElementById('b_gsr_v').textContent = b_gsr + '%';
+  document.getElementById('b_posture_v').textContent = b_posture + '%';
+
+  // Update game stream bars
+  document.getElementById('g_score').style.width = (score / 2000 * 100) + '%';
+  document.getElementById('g_score_v').textContent = score;
+  document.getElementById('g_acc').style.width = accuracy + '%';
+  document.getElementById('g_acc_v').textContent = accuracy + '%';
+  document.getElementById('g_err').style.width = errorRate + '%';
+  document.getElementById('g_err_v').textContent = Math.round(errorRate) + '%';
+  document.getElementById('g_rt').style.width = (rt / 800 * 100) + '%';
+  document.getElementById('g_rt_v').textContent = rt + 'ms';
+  document.getElementById('g_time').style.width = (duration / 60 * 100) + '%';
+  document.getElementById('g_time_v').textContent = duration + ' min';
+
+  // Run pipeline
+  const ablations = ablateAll(body);
+  const leaks = computeLeaks(model, body, game);
+  const integrity = integrityScore(leaks);
+  const interpretation = interpretIntegrity(integrity, leaks);
+
+  // Update integrity meter
+  const integrityEl = document.getElementById('integrity-value');
+  integrityEl.textContent = integrity.toFixed(2);
+  integrityEl.classList.remove('low', 'mid');
+  if (integrity < 0.7) integrityEl.classList.add('low');
+  else if (integrity < 0.9) integrityEl.classList.add('mid');
+  document.getElementById('interpretation').textContent = interpretation;
+
+  // Update ablation
+  const abRows = document.getElementById('ablation-rows');
+  abRows.innerHTML = ablations.map(a => `
+    <div class="ablation-row">
+      <span class="sensor">${a.name}</span>
+      <div class="bar">
+        <div class="bar-fill" style="width:${Math.min(100, a.residual * 2)}%; background: ${a.verdict === 'CRITICAL' ? 'var(--leak)' : a.verdict === 'INFORMATIONAL' ? 'var(--warm)' : 'var(--cool)'}"></div>
+      </div>
+      <span class="pct">${a.residual.toFixed(1)}%</span>
+      <span class="verdict ${a.verdict}">${a.verdict.slice(0, 4)}</span>
+    </div>
+  `).join('');
+
+  // Update leaks
+  const leaksList = document.getElementById('leaks-list');
+  if (Object.keys(leaks).length === 0) {
+    leaksList.innerHTML = '<div class="no-leaks">No leaks — the model, the body, and the game are in integrity.</div>';
+  } else {
+    leaksList.innerHTML = Object.entries(leaks).map(([k, v]) => `
+      <div class="leak ${v.over ? 'over' : 'under'}">
+        <div class="name">${k}</div>
+        <div class="interp">${v.interpretation}</div>
+        <div><span class="claimed">claimed: ${v.claimed}</span> · <span class="actual">actual: ${v.actual}</span> · gap: ${v.gap}</div>
+      </div>
+    `).join('');
+  }
+}
+
+// === Model sliders (added dynamically) ===
+function addModelSliders() {
+  const stream = document.getElementById('stream-model');
+  // Replace the static rows with input rows
+  const rows = [
+    { id: 'm_focus', label: 'focus', def: 60 },
+    { id: 'm_calm', label: 'calm', def: 60 },
+    { id: 'm_effort', label: 'effort', def: 60 },
+    { id: 'm_fatigue', label: 'fatigue', def: 25 },
+    { id: 'm_win', label: 'will win', def: 60 },
+    { id: 'm_dur', label: 'can sustain', def: 70 },
+  ];
+  stream.innerHTML = '<h3>Your model (claimed)</h3>' + rows.map(r => `
+    <div class="input-row">
+      <label>${r.label}</label>
+      <input type="range" id="${r.id}" min="0" max="100" value="${r.def}" oninput="update()">
+      <span class="value" id="${r.id}_v">${r.def}%</span>
+    </div>
+  `).join('');
+  // wire up
+  rows.forEach(r => {
+    const slider = document.getElementById(r.id);
+    const value = document.getElementById(r.id + '_v');
+    slider.addEventListener('input', () => {
+      value.textContent = slider.value + '%';
+      update();
+    });
+  });
+}
+
+// Tabs (visual only for now, but we can add streaming view)
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+  });
+});
+
+addModelSliders();
+update();
+</script>
+</body>
+</html>

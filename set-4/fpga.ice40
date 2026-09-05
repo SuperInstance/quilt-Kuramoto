@@ -1,0 +1,36 @@
+# synth/fpga.ice40 -- yosys script: quilt 2-cell fabric -> iCE40 JSON
+# Topology = formal conservation proof shape: two full cells (core FSM +
+# dialfile + 4 edge engines + echo gate + RQH bank) + io node + registered
+# pipe slices on one ring, one tick scheduler. No stubs, no engine
+# assumptions: every module is the rtl/ one the 11 TBs and 4 formal
+# proofs exercised (post-2881b29 tree).
+#
+# Usage:
+#   yosys -s synth/fpga.ice40              # -s: run as a yosys script
+#   (the .ice40 name keeps device intent visible; -s overrides the
+#   extension-based frontend guess)
+#
+# Parameters applied via -chparam on hierarchy:
+
+read_verilog rtl/q_tick_sched.v
+read_verilog rtl/q_flit_pipe.v
+read_verilog rtl/q_link_ringport.v
+read_verilog rtl/q_dialfile.v
+read_verilog rtl/q_hebb_edge.v
+read_verilog rtl/q_echo_gate.v
+read_verilog rtl/q_rqh_bank.v
+read_verilog rtl/q_cell_core.v
+read_verilog rtl/q_cell.v
+read_verilog rtl/q_io_port.v
+read_verilog rtl/q_fabric_top.v
+
+# 2-cell fabric: same node census as f_fabric_conservation (cells A,B +
+# io), real parameters (EDGES_N=4, K=8, B=8, AGEW=24, PW=16) -- not the
+# proof's shrunk ones; this is the metal target, not the BMC target.
+hierarchy -check -top q_fabric_top -chparam NCELL 2
+
+# -abc2: second ABC pass post-mapping (measurably better ice40 LUT pack)
+synth_ice40 -top q_fabric_top -abc2 -json synth/fabric2_ice40.json
+
+stat -top q_fabric_top
+tee -o synth/stat_fabric2.txt stat -top q_fabric_top

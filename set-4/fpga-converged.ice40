@@ -1,0 +1,47 @@
+# synth/fpga-converged.ice40 -- the PnR-converged, bitstream-ready build.
+#
+# Config k4b4a8e1: K=4 ladder buckets, B=4 bits/bucket, AGEW=8 hyperbola
+# age, EDGES_N=1, NCELL=2 -- EXACTLY the parameters of the formal
+# conservation proof (formal/f_fabric_conservation.v), on the real
+# q_fabric_top ring (2 cells + io node + 3 registered pipes + tick
+# scheduler). No stubs: the same rtl/ the 14 TBs and 4 proofs exercise.
+#
+# Result on iCE40HX8K-CT256 (synth/wall numbers in docs/SYNTHESIS-FPGA.md):
+#   round 2: 5800 LUT4 / 7400 LC (96%) / fmax 27.72 MHz
+#   round 3 (PIPE_EFF=1 retime, q_cell_core ST_EFFP/ST_EFFM pipeline):
+#     yosys:   5951 LUT4 / ~2340 FF / SB_CARRY (stat_fabric2_k4b4a8e1.txt)
+#     nextpnr: 7528/7680 LC (98%), 157/256 IO, fmax 40.44 MHz @ 12 MHz target
+#     critical path now the engine hyperbola interval compare (was the
+#     core echo-gate -> RQH deposit -> act-integrate chain). See
+#     docs/SYNTHESIS-FPGA.md round 3, section 8.
+#
+# Usage:
+#   yosys -s synth/fpga-converged.ice40
+#   nextpnr-ice40 --hx8k --package ct256 \
+#     --json synth/fabric2_k4b4a8e1_ice40.json --freq 12 \
+#     --timing-allow-fail --pcf-allow-unconstrained \
+#     --asc synth/fabric2_k4b4a8e1.asc --report synth/report_k4b4a8e1.json
+#   icepack synth/fabric2_k4b4a8e1.asc synth/fabric2_k4b4a8e1.bin
+# (--pcf-allow-unconstrained: no board attached; IO auto-placed. Pin
+# budget and the PCF work item are in docs/SYNTHESIS-FPGA.md §7.)
+
+read_verilog rtl/q_tick_sched.v
+read_verilog rtl/q_flit_pipe.v
+read_verilog rtl/q_link_ringport.v
+read_verilog rtl/q_dialfile.v
+read_verilog rtl/q_hebb_edge.v
+read_verilog rtl/q_echo_gate.v
+read_verilog rtl/q_rqh_bank.v
+read_verilog rtl/q_cell_core.v
+read_verilog rtl/q_cell.v
+read_verilog rtl/q_io_port.v
+read_verilog rtl/q_fabric_top.v
+
+# formal-proof parameters (chparam must precede hierarchy so the q_cell
+# def defaults propagate into instances that don't pin K/B/AGEW)
+chparam -set K 4 -set B 4 -set AGEW 8 q_cell
+hierarchy -check -top q_fabric_top -chparam NCELL 2 -chparam EDGES_N 1
+
+synth_ice40 -top q_fabric_top -abc2 -json synth/fabric2_k4b4a8e1_ice40.json
+
+tee -o synth/stat_fabric2_k4b4a8e1.txt stat -top q_fabric_top

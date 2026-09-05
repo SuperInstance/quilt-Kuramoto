@@ -1,0 +1,23 @@
+[options]
+mode prove
+depth 55
+
+[engines]
+abc pdr
+
+[script]
+read -formal q_flit_pipe.v
+read -formal q_echo_gate.v
+read -formal q_rqh_bank.v
+read -formal q_hebb_edge.v
+read -formal q_cell_core.v
+read -formal f_fabric_conservation.v
+prep -top f_fabric_conservation
+
+[files]
+rtl/q_flit_pipe.v
+rtl/q_echo_gate.v
+rtl/q_rqh_bank.v
+rtl/q_hebb_edge.v
+rtl/q_cell_core.v
+formal/f_fabric_conservation.v

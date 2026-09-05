@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Neural Quilt — Play the Live Canon with Your Thoughts</title>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --bg-soft: #15151f;
+    --fg: #e0e0e8;
+    --fg-dim: #8a8a9a;
+    --accent: #6ad4ff;
+    --warm: #ff6a3a;
+    --cool: #3a6aff;
+    --border: #2a2a3a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', -apple-system, system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    min-height: 100vh;
+    padding: 2rem 1rem;
+  }
+  .container { max-width: 1100px; margin: 0 auto; }
+  h1 {
+    font-size: 2.4rem;
+    font-weight: 200;
+    letter-spacing: -0.04em;
+    margin-bottom: 0.4rem;
+  }
+  h1 .accent { color: var(--accent); }
+  .tagline {
+    color: var(--fg-dim);
+    font-size: 1rem;
+    font-weight: 300;
+    margin-bottom: 2.5rem;
+    font-style: italic;
+  }
+  .modes {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 2.5rem;
+  }
+  .mode {
+    padding: 1.2rem;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .mode:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .mode.active { border-color: var(--accent); background: rgba(106,212,255,0.05); }
+  .mode h3 {
+    font-size: 1.1rem;
+    font-weight: 500;
+    margin-bottom: 0.4rem;
+  }
+  .mode p {
+    font-size: 0.85rem;
+    color: var(--fg-dim);
+    line-height: 1.4;
+  }
+
+  /* The signal visualizer (16 dials) */
+  .signal-viz {
+    display: grid;
+    grid-template-columns: repeat(16, 1fr);
+    gap: 4px;
+    padding: 1.2rem;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: 1.5rem;
+  }
+  .dial {
+    aspect-ratio: 1;
+    border-radius: 4px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.3s, transform 0.3s;
+  }
+  .dial .label {
+    position: absolute;
+    bottom: -18px;
+    font-size: 0.6rem;
+    color: var(--fg-dim);
+    text-align: center;
+    width: 100%;
+  }
+  .dial .value {
+    font-size: 0.5rem;
+    color: var(--fg);
+  }
+
+  /* The quilt of nearest cells */
+  .quilt-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .cell-card {
+    padding: 1.2rem;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    position: relative;
+    overflow: hidden;
+  }
+  .cell-card .rank {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    font-size: 0.7rem;
+    color: var(--fg-dim);
+  }
+  .cell-card .cosine {
+    font-size: 0.75rem;
+    color: var(--accent);
+    margin-bottom: 0.4rem;
+    font-family: monospace;
+  }
+  .cell-card h4 {
+    font-size: 0.95rem;
+    font-weight: 500;
+    margin-bottom: 0.4rem;
+  }
+  .cell-card p {
+    font-size: 0.8rem;
+    color: var(--fg-dim);
+    line-height: 1.5;
+  }
+  .cell-card.warm { border-color: var(--warm); }
+  .cell-card.warm::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--warm);
+  }
+  .cell-card.cold { border-color: var(--cool); }
+
+  /* Controls */
+  .controls {
+    padding: 1.5rem;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: 1.5rem;
+  }
+  .controls h3 {
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-bottom: 1rem;
+    color: var(--fg-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .controls .row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.6rem;
+  }
+  .controls label {
+    width: 140px;
+    font-size: 0.85rem;
+    color: var(--fg);
+  }
+  .controls input[type=range] {
+    flex: 1;
+    -webkit-appearance: none;
+    background: transparent;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--border);
+  }
+  .controls input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+  }
+  .controls input[type=text] {
+    flex: 1;
+    padding: 0.5rem 0.8rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--fg);
+    border-radius: 4px;
+    font-family: inherit;
+  }
+  .value-display {
+    width: 60px;
+    font-family: monospace;
+    color: var(--accent);
+    text-align: right;
+  }
+
+  .note {
+    padding: 1rem;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--fg-dim);
+    font-size: 0.85rem;
+    line-height: 1.6;
+  }
+  .note strong { color: var(--fg); }
+
+  /* Marco Polo indicator */
+  .marco-polo {
+    text-align: center;
+    padding: 1.5rem;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: 1.5rem;
+  }
+  .marco-polo .warmth-bar {
+    height: 24px;
+    background: linear-gradient(90deg, var(--cool), var(--warm));
+    border-radius: 4px;
+    margin: 1rem 0 0.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .marco-polo .warmth-marker {
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 4px;
+    background: var(--fg);
+    box-shadow: 0 0 12px var(--fg);
+  }
+  .marco-polo .warmth-label {
+    font-size: 0.85rem;
+    color: var(--fg-dim);
+  }
+  .marco-polo .warmth-value {
+    font-size: 1.6rem;
+    color: var(--accent);
+    font-weight: 200;
+    font-family: monospace;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>The Neural <span class="accent">Quilt</span></h1>
+  <p class="tagline">A wearable neural device is a child's Marco Polo. The Quilt is the room.<br>The signal IS the play.</p>
+
+  <div class="modes">
+    <div class="mode active" data-mode="solo">
+      <h3>SOLO</h3>
+      <p>One wearer navigates the Quilt with their thoughts. The 3 nearest cells light up.</p>
+    </div>
+    <div class="mode" data-mode="duet">
+      <h3>DUET</h3>
+      <p>Two wearers play neural Marco Polo. Warmer = thoughts aligned.</p>
+    </div>
+    <div class="mode" data-mode="jam">
+      <h3>JAM</h3>
+      <p>The hive mind. Many wearers' signals become one query.</p>
+    </div>
+  </div>
+
+  <div id="duet-area" style="display: none;">
+    <div class="marco-polo">
+      <div class="warmth-value" id="warmth-value">0.500</div>
+      <div class="warmth-label">A's thought  ←→  B's thought (cosine)</div>
+      <div class="warmth-bar">
+        <div class="warmth-marker" id="warmth-marker" style="left: 50%;"></div>
+      </div>
+      <div style="font-size: 0.85rem; color: var(--fg-dim); margin-top: 0.5rem;">
+        Move the sliders below to align. Higher = warmer.
+      </div>
+    </div>
+  </div>
+
+  <div class="controls" id="controls">
+    <h3 id="controls-title">Your Neural Signal</h3>
+    <div class="row">
+      <label>alpha (calm)</label>
+      <input type="range" id="alpha" min="0" max="32767" value="16384">
+      <span class="value-display" id="alpha-v">16384</span>
+    </div>
+    <div class="row">
+      <label>beta (focus)</label>
+      <input type="range" id="beta" min="0" max="32767" value="8192">
+      <span class="value-display" id="beta-v">8192</span>
+    </div>
+    <div class="row">
+      <label>gamma</label>
+      <input type="range" id="gamma" min="0" max="32767" value="4096">
+      <span class="value-display" id="gamma-v">4096</span>
+    </div>
+    <div class="row">
+      <label>theta</label>
+      <input type="range" id="theta" min="0" max="32767" value="12288">
+      <span class="value-display" id="theta-v">12288</span>
+    </div>
+    <div class="row">
+      <label>delta</label>
+      <input type="range" id="delta" min="0" max="32767" value="8192">
+      <span class="value-display" id="delta-v">8192</span>
+    </div>
+    <div class="row">
+      <label>heart_rate</label>
+      <input type="range" id="hr" min="0" max="32767" value="12288">
+      <span class="value-display" id="hr-v">12288</span>
+    </div>
+    <div class="row">
+      <label>heart_rate_var</label>
+      <input type="range" id="hrv" min="0" max="32767" value="4096">
+      <span class="value-display" id="hrv-v">4096</span>
+    </div>
+    <div class="row">
+      <label>accel_x</label>
+      <input type="range" id="ax" min="0" max="32767" value="16384">
+      <span class="value-display" id="ax-v">16384</span>
+    </div>
+    <div class="row">
+      <label>accel_y</label>
+      <input type="range" id="ay" min="0" max="32767" value="16384">
+      <span class="value-display" id="ay-v">16384</span>
+    </div>
+    <div class="row">
+      <label>accel_z</label>
+      <input type="range" id="az" min="0" max="32767" value="24576">
+      <span class="value-display" id="az-v">24576</span>
+    </div>
+    <div class="row">
+      <label>gsr</label>
+      <input type="range" id="gsr" min="0" max="32767" value="8192">
+      <span class="value-display" id="gsr-v">8192</span>
+    </div>
+    <div class="row">
+      <label>skin_temp</label>
+      <input type="range" id="st" min="0" max="32767" value="24576">
+      <span class="value-display" id="st-v">24576</span>
+    </div>
+    <div class="row">
+      <label>blink_rate</label>
+      <input type="range" id="br" min="0" max="32767" value="8192">
+      <span class="value-display" id="br-v">8192</span>
+    </div>
+    <div class="row">
+      <label>focus (derived)</label>
+      <input type="range" id="focus" min="0" max="32767" value="8192">
+      <span class="value-display" id="focus-v">8192</span>
+    </div>
+    <div class="row">
+      <label>calm (derived)</label>
+      <input type="range" id="calm" min="0" max="32767" value="12288">
+      <span class="value-display" id="calm-v">12288</span>
+    </div>
+    <div class="row">
+      <label>resp_rate</label>
+      <input type="range" id="rr" min="0" max="32767" value="16384">
+      <span class="value-display" id="rr-v">16384</span>
+    </div>
+  </div>
+
+  <div class="signal-viz" id="signal-viz"></div>
+
+  <h2 style="font-size: 1.1rem; font-weight: 400; margin-bottom: 0.8rem; color: var(--fg-dim);">Nearest cells in the Quilt</h2>
+  <div class="quilt-grid" id="quilt-grid"></div>
+
+  <div class="note">
+    <strong>How to play:</strong> The 16 sliders above are your wearable's neural signal
+    (alpha/beta/gamma/theta/delta EEG, heart rate, motion, GSR, etc.). Move them to change
+    your "thought." The 3 nearest cells in the Quilt light up below. The cosine number
+    shows how close you are — closer = warmer. In <strong>DUET</strong> mode, two wearers
+    play Marco Polo: align your thoughts for higher warmth. In <strong>JAM</strong> mode,
+    many wearers' signals average into one hive-mind query. <br><br>
+    <strong>F139 — The Signal Is the Play.</strong> See the
+    <a href="https://github.com/SuperInstance/AI-Writings/blob/master/seed-canon/papers/paper-449.md" style="color: var(--accent);">paper</a> and the
+    <a href="https://github.com/SuperInstance/quilt-cowboy/blob/master/neural_quilt.py" style="color: var(--accent);">prototype</a>.
+  </div>
+</div>
+
+<script>
+// FNV-1a (matches live_canon.py exactly)
+const FNV_OFFSET = 0xCBF29CE484222325n;
+const FNV_PRIME = 0x00000100000001B3n;
+const MASK = 0xFFFFFFFFFFFFFFFFn;
+function fnv1a_64(s) {
+  let h = FNV_OFFSET;
+  const enc = new TextEncoder();
+  const bytes = enc.encode(s);
+  for (const b of bytes) {
+    h ^= BigInt(b);
+    h = (h * FNV_PRIME) & MASK;
+  }
+  return h;
+}
+
+// Cell dial encoding (matches live_canon.py)
+function cellToDials(p) {
+  const year = parseInt((p.date || '1970-01-01').slice(0, 4)) || 1970;
+  const yearQ = (year - 1970) * 546;
+  const phaseQ = (p.phase || 0) * 218;
+  const fQ = (p.f_number || 0) * 218;
+  const nRefs = (p.ref_papers || []).length + (p.ref_f_numbers || []).length;
+  const nRefsQ = Math.min(0x7FFF, nRefs * 256);
+  const th = fnv1a_64(p.title || '');
+  const titleLo = Number(th & 0xFFFFn);
+  const titleHi = Number((th >> 16n) & 0xFFFFn);
+  const num = Math.min(p.number || 0, 500);
+  const numQ = num * 131;
+  return [numQ, titleLo, fQ, phaseQ, yearQ, nRefsQ, titleHi, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+}
+
+const PAPERS = [
+  { number: 425, title: "F115 — The Logical Routes: VHDL × Verilog × the QUF bit-exactness", f_number: 115, phase: 237, date: "2026-09-03", ref_papers: [426, 427], ref_f_numbers: [] },
+  { number: 426, title: "F116 — The 5+1+1+1+1+1+1+1+1+1+1 Opcodes in 5 Substrates: A Polyformalism Atlas", f_number: 116, phase: 238, date: "2026-09-03", ref_papers: [], ref_f_numbers: [115] },
+  { number: 427, title: "F117 — The 5-Substrate Polyformalism: Python × C × Rust × Verilog × VHDL, One Cell", f_number: 117, phase: 239, date: "2026-09-03", ref_papers: [], ref_f_numbers: [115, 116] },
+  { number: 432, title: "F122 — The Shape Store: 5 Indices on Cloudflare Vectorize", f_number: 122, phase: 244, date: "2026-09-03", ref_papers: [], ref_f_numbers: [120, 121] },
+  { number: 433, title: "F123 — The Composer Agent: 5 Cells, 80 Parameters", f_number: 123, phase: 245, date: "2026-09-03", ref_papers: [], ref_f_numbers: [120, 122] },
+  { number: 439, title: "F129 — The Live Canon: Papers as Cells, Reading as Navigation", f_number: 129, phase: 251, date: "2026-09-03", ref_papers: [], ref_f_numbers: [115, 120, 122, 125] },
+  { number: 440, title: "F130 — The Polyformal Live Canon: One Cell, Five Substrates", f_number: 130, phase: 251, date: "2026-09-03", ref_papers: [], ref_f_numbers: [115, 129] },
+  { number: 441, title: "F131 — The 3-Package Polyformalism: One Cell, Three Registries", f_number: 131, phase: 252, date: "2026-09-03", ref_papers: [], ref_f_numbers: [115, 130] },
+  { number: 442, title: "F132 — Operational Fictions as Concrete System-Prompt Noun-Phrases", f_number: 132, phase: 253, date: "2026-09-03", ref_papers: [], ref_f_numbers: [] },
+  { number: 443, title: "F133 — Operational Fictions as Falsifiable Claims (avg divergence 0.861)", f_number: 133, phase: 254, date: "2026-09-03", ref_papers: [], ref_f_numbers: [132] },
+  { number: 444, title: "F134 — The Quilt Cowboy: Orchestrator Over 12 Cheap Voices", f_number: 134, phase: 254, date: "2026-09-03", ref_papers: [], ref_f_numbers: [132, 133] },
+  { number: 445, title: "F135 — The Wheelhouse Test: Scoring Fictions for 0300-in-a-Gale Tolerability", f_number: 135, phase: 254, date: "2026-09-03", ref_papers: [], ref_f_numbers: [132, 133] },
+];
+
+const CELLS = PAPERS.map(cellToDials);
+
+function cosine(a, b) {
+  let dot = 0, na = 0, nb = 0;
+  for (let i = 0; i < 16; i++) {
+    dot += a[i] * b[i];
+    na += a[i] * a[i];
+    nb += b[i] * b[i];
+  }
+  na = Math.sqrt(na); nb = Math.sqrt(nb);
+  return na && nb ? dot / (na * nb) : 0;
+}
+
+const SLIDER_KEYS = ['alpha', 'beta', 'gamma', 'theta', 'delta', 'hr', 'hrv', 'ax', 'ay', 'az', 'gsr', 'st', 'br', 'focus', 'calm', 'rr'];
+
+function getSignal() {
+  return SLIDER_KEYS.map(k => parseInt(document.getElementById(k).value));
+}
+
+function renderSignalViz() {
+  const sig = getSignal();
+  const viz = document.getElementById('signal-viz');
+  viz.innerHTML = '';
+  for (let i = 0; i < 16; i++) {
+    const dial = document.createElement('div');
+    dial.className = 'dial';
+    const intensity = sig[i] / 32767;
+    const hue = 180 + (1 - intensity) * 60;  // teal-blue gradient
+    const sat = 30 + intensity * 50;
+    const light = 30 + intensity * 30;
+    dial.style.background = `hsl(${hue}, ${sat}%, ${light}%)`;
+    dial.style.borderColor = `hsl(${hue}, ${sat}%, ${light + 20}%)`;
+    dial.innerHTML = `<span class="value">${(sig[i]/327).toFixed(0)}</span><span class="label">${SLIDER_KEYS[i]}</span>`;
+    viz.appendChild(dial);
+  }
+}
+
+function findNearest(signal, k = 3) {
+  const scored = CELLS.map((c, i) => ({ i, score: cosine(signal, c) }));
+  scored.sort((a, b) => b.score - a.score);
+  return scored.slice(0, k);
+}
+
+function renderQuilt() {
+  const sig = getSignal();
+  const nearest = findNearest(sig, 3);
+  const grid = document.getElementById('quilt-grid');
+  grid.innerHTML = '';
+  for (let j = 0; j < 3; j++) {
+    const { i, score } = nearest[j];
+    const paper = PAPERS[i];
+    const card = document.createElement('div');
+    card.className = 'cell-card';
+    if (score > 0.7) card.classList.add('warm');
+    else if (score < 0.4) card.classList.add('cold');
+    const warmth = score > 0.7 ? '🔥 warm' : (score < 0.4 ? '❄️ cold' : '↔️ neutral');
+    card.innerHTML = `
+      <span class="rank">#${j+1}</span>
+      <div class="cosine">cosine = ${score.toFixed(4)} ${warmth}</div>
+      <h4>${paper.title}</h4>
+      <p>F${paper.f_number} · Phase ${paper.phase} · ${paper.ref_papers.length + paper.ref_f_numbers.length} refs</p>
+    `;
+    grid.appendChild(card);
+  }
+}
+
+function renderDuet() {
+  const a = getSignal();
+  // B = slightly perturbed signal (or use a fixed B for now)
+  const b = getSignalB();
+  const c = cosine(a, b);
+  document.getElementById('warmth-value').textContent = c.toFixed(4);
+  document.getElementById('warmth-marker').style.left = (c * 100) + '%';
+  renderQuilt();
+}
+
+let signalB = [16384, 8192, 4096, 12288, 8192, 12288, 4096, 16384, 16384, 24576, 8192, 24576, 8192, 8192, 12288, 16384];
+function getSignalB() {
+  // Simulate B's signal as a fixed vector for now
+  return signalB.slice();
+}
+
+function renderJam() {
+  // Average all "wearers" — for now just 4 simulated signals
+  const a = getSignal();
+  const signals = [
+    a,
+    signalB,
+    [20000, 12000, 5000, 10000, 6000, 14000, 3000, 20000, 14000, 22000, 6000, 24000, 5000, 12000, 18000, 14000],
+    [12000, 6000, 3000, 14000, 10000, 10000, 5000, 12000, 18000, 26000, 10000, 24000, 12000, 4000, 8000, 18000],
+  ];
+  const avg = new Array(16).fill(0);
+  for (const s of signals) {
+    for (let i = 0; i < 16; i++) avg[i] += s[i];
+  }
+  for (let i = 0; i < 16; i++) avg[i] = Math.floor(avg[i] / signals.length);
+  const nearest = findNearest(avg, 3);
+  const grid = document.getElementById('quilt-grid');
+  grid.innerHTML = '';
+  for (let j = 0; j < 3; j++) {
+    const { i, score } = nearest[j];
+    const paper = PAPERS[i];
+    const card = document.createElement('div');
+    card.className = 'cell-card';
+    if (score > 0.7) card.classList.add('warm');
+    const card2 = document.createElement('div');
+    card2.className = 'cell-card';
+    card2.innerHTML = `
+      <span class="rank">#${j+1}</span>
+      <div class="cosine">hive cosine = ${score.toFixed(4)}</div>
+      <h4>${paper.title}</h4>
+      <p>F${paper.f_number} · Phase ${paper.phase} · 4-wearer average</p>
+    `;
+    grid.appendChild(card2);
+  }
+}
+
+let currentMode = 'solo';
+function setMode(mode) {
+  currentMode = mode;
+  document.querySelectorAll('.mode').forEach(m => m.classList.toggle('active', m.dataset.mode === mode));
+  document.getElementById('duet-area').style.display = (mode === 'duet') ? 'block' : 'none';
+  document.getElementById('controls-title').textContent =
+    mode === 'duet' ? "Wearer A's Neural Signal" :
+    mode === 'jam' ? "Wearer #1's Neural Signal (3 others simulated)" :
+    "Your Neural Signal";
+  update();
+}
+
+function update() {
+  renderSignalViz();
+  if (currentMode === 'duet') renderDuet();
+  else if (currentMode === 'jam') renderJam();
+  else renderQuilt();
+}
+
+// Wire up sliders
+for (const k of SLIDER_KEYS) {
+  const slider = document.getElementById(k);
+  const value = document.getElementById(k + '-v');
+  slider.addEventListener('input', () => {
+    value.textContent = slider.value;
+    update();
+  });
+}
+
+document.querySelectorAll('.mode').forEach(m => {
+  m.addEventListener('click', () => setMode(m.dataset.mode));
+});
+
+setMode('solo');
+</script>
+</body>
+</html>
