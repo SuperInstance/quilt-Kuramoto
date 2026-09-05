@@ -1,0 +1,15 @@
+[options]
+mode bmc
+depth 25
+
+[engines]
+smtbmc boolector
+
+[script]
+read -formal q_echo_gate.v
+read -formal f_echo_gate_dyadic.v
+prep -top f_echo_gate_dyadic
+
+[files]
+rtl/q_echo_gate.v
+formal/f_echo_gate_dyadic.v
