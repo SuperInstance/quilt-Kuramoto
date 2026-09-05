@@ -1,0 +1,3 @@
+# Paper 226: The API Fishing Guide
+
+The user articulated a beautiful analogy: sending prompts to various APIs is like fishing in different waters. Each API is a different ground. Each model is a differ

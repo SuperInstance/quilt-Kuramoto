@@ -1,0 +1,19 @@
+[options]
+mode bmc
+depth 105
+
+[engines]
+smtbmc boolector
+
+[script]
+read -formal q_echo_gate.v
+read -formal q_rqh_bank.v
+read -formal q_cell_core.v
+read -formal f_cell_core_tick.v
+prep -top f_cell_core_tick
+
+[files]
+rtl/q_echo_gate.v
+rtl/q_rqh_bank.v
+rtl/q_cell_core.v
+formal/f_cell_core_tick.v

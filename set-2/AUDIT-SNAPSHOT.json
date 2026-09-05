@@ -1,0 +1,194 @@
+{
+  "schema": 1,
+  "entries": [
+    {
+      "relpath": "cell_core.fair.sby",
+      "file_sha": "5dba9d53ff1d",
+      "engines": [
+        "smtbmc boolector"
+      ],
+      "workdir": "formal/cell_core.fair",
+      "model_sha": "04f841cfc682",
+      "verdict": "INCOMPLETE",
+      "depth": 85,
+      "assertion_hits": [],
+      "counterexamples": [],
+      "workdir_mtime": 1788101892
+    },
+    {
+      "relpath": "cell_core.tick.sby",
+      "file_sha": "91eeb18d29f4",
+      "engines": [
+        "smtbmc boolector"
+      ],
+      "workdir": "formal/cell_core.tick",
+      "model_sha": "ddf6caba368a",
+      "verdict": "PASS",
+      "depth": 79,
+      "assertion_hits": [],
+      "counterexamples": [],
+      "workdir_mtime": 1788073151
+    },
+    {
+      "relpath": "echo_gate.dyadic.sby",
+      "file_sha": "71575b76cd16",
+      "engines": [
+        "smtbmc boolector"
+      ],
+      "workdir": "formal/echo_gate.dyadic",
+      "model_sha": "bcafe13ce16b",
+      "verdict": "PASS",
+      "depth": 24,
+      "assertion_hits": [],
+      "counterexamples": [],
+      "workdir_mtime": 1788099947
+    },
+    {
+      "relpath": "fabric.conservation.probe-t1.sby",
+      "file_sha": "5ee1bbd62313",
+      "engines": [
+        "smtbmc boolector"
+      ],
+      "workdir": "formal/fabric.conservation.probe-t1",
+      "model_sha": "48bf60baee0c",
+      "verdict": "UNKNOWN",
+      "depth": 6,
+      "assertion_hits": [
+        "f_fabric_conservation_t1.v:300.9-300.68",
+        "f_fabric_conservation_t1.v:290.9-290.43"
+      ],
+      "counterexamples": [
+        "engine_0/trace_induct.vcd",
+        "engine_0/trace_induct.yw"
+      ],
+      "workdir_mtime": 1788095296,
+      "tasks": [
+        {
+          "task": "basecase",
+          "verdict": "PASS"
+        },
+        {
+          "task": "induction",
+          "verdict": "FAIL"
+        }
+      ]
+    },
+    {
+      "relpath": "fabric.conservation.probe.sby",
+      "file_sha": "ba827a82a1de",
+      "engines": [
+        "smtbmc boolector"
+      ],
+      "workdir": "formal/fabric.conservation.probe",
+      "model_sha": "08d94baae8f9",
+      "verdict": "UNKNOWN",
+      "depth": 8,
+      "assertion_hits": [
+        "f_fabric_conservation.v:293.9-293.28"
+      ],
+      "counterexamples": [
+        "engine_0/trace_induct.vcd",
+        "engine_0/trace_induct.yw"
+      ],
+      "workdir_mtime": 1788099958,
+      "tasks": [
+        {
+          "task": "basecase",
+          "verdict": "PASS"
+        },
+        {
+          "task": "induction",
+          "verdict": "FAIL"
+        }
+      ]
+    },
+    {
+      "relpath": "fabric.conservation.prove-l12.sby",
+      "file_sha": "2550297e725a",
+      "engines": [
+        "smtbmc boolector"
+      ],
+      "workdir": "formal/fabric.conservation.prove-l12",
+      "model_sha": "cdef5151e10b",
+      "verdict": "INCOMPLETE",
+      "depth": 55,
+      "assertion_hits": [],
+      "counterexamples": [],
+      "workdir_mtime": 1788102707,
+      "tasks": [
+        {
+          "task": "basecase",
+          "verdict": "PASS"
+        }
+      ]
+    },
+    {
+      "relpath": "fabric.conservation.prove-t1.sby",
+      "file_sha": "fbc99972b6bb",
+      "engines": [
+        "smtbmc boolector"
+      ],
+      "workdir": "formal/fabric.conservation.prove-t1",
+      "model_sha": "48bf60baee0c",
+      "verdict": "INCOMPLETE",
+      "depth": 55,
+      "assertion_hits": [],
+      "counterexamples": [],
+      "workdir_mtime": 1788095559,
+      "tasks": [
+        {
+          "task": "basecase",
+          "verdict": "PASS"
+        }
+      ]
+    },
+    {
+      "relpath": "fabric.conservation.prove.sby",
+      "file_sha": "3ceb607fcc18",
+      "engines": [
+        "smtbmc boolector"
+      ],
+      "workdir": "formal/fabric.conservation.prove",
+      "model_sha": "08d94baae8f9",
+      "verdict": "INCOMPLETE",
+      "depth": 55,
+      "assertion_hits": [],
+      "counterexamples": [],
+      "workdir_mtime": 1788095143,
+      "tasks": [
+        {
+          "task": "basecase",
+          "verdict": "PASS"
+        }
+      ]
+    },
+    {
+      "relpath": "fabric.conservation.sby",
+      "file_sha": "cab6669ce713",
+      "engines": [
+        "smtbmc boolector"
+      ],
+      "workdir": "formal/fabric.conservation",
+      "model_sha": "08d94baae8f9",
+      "verdict": "PASS",
+      "depth": 54,
+      "assertion_hits": [],
+      "counterexamples": [],
+      "workdir_mtime": 1788074310
+    },
+    {
+      "relpath": "flit_pipe.fly.sby",
+      "file_sha": "45b1ee5ed69d",
+      "engines": [
+        "smtbmc boolector"
+      ],
+      "workdir": "formal/flit_pipe.fly",
+      "model_sha": "e09c864642aa",
+      "verdict": "PASS",
+      "depth": 39,
+      "assertion_hits": [],
+      "counterexamples": [],
+      "workdir_mtime": 1788074384
+    }
+  ]
+}

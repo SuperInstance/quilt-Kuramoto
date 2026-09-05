@@ -1,0 +1,33 @@
+# cell_core.tick.prove.sby -- UNBOUNDED tick liveness (tick-depth lane).
+# Same harness as cell_core.tick.sby (BMC 105) but closed with k-induction
+# via PDR: the deadline assertions
+#   Q2a1 strobe -> next ci_ready pulse  <= 100 cycles
+#   Q2a2 strobe -> first sweep cmd      <=  66 cycles (edge linked)
+#   Q2b pending/unserviced strobe => !ci_ready
+# are SAFETY encodings of liveness (bounded response). An unbounded PASS
+# here is genuine unbounded liveness: every strobed tick is serviced
+# within 100 cycles, in all reachable futures, under permanent ingress
+# flood and ARBITRARY strobes. Fairness needed is exactly E1/E2/E3
+# (egress always grants; engine answers <=12/4 cycles; dialfile timing)
+# -- hardware contracts, not environment wishes: lo/lx_ready are tied 1
+# in the fabric's local egress (single-owner handshake) and q_hebb_edge
+# answers in 10/2 in silicon (BACKEND-NOTES).
+[options]
+mode prove
+depth 130
+
+[engines]
+abc pdr
+
+[script]
+read -formal q_echo_gate.v
+read -formal q_rqh_bank.v
+read -formal q_cell_core.v
+read -formal f_cell_core_tick.v
+prep -top f_cell_core_tick
+
+[files]
+rtl/q_echo_gate.v
+rtl/q_rqh_bank.v
+rtl/q_cell_core.v
+formal/f_cell_core_tick.v
