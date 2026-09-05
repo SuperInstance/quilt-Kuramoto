@@ -1,0 +1,9 @@
+Info: Device utilisation:
+Info: 	         ICESTORM_LC:   12448/   7680   162%
+Info: 	        ICESTORM_RAM:       0/     32     0%
+Info: 	               SB_IO:     157/    256    61%
+Info: 	               SB_GB:       8/      8   100%
+Info: 	        ICESTORM_PLL:       0/      2     0%
+Info: 	         SB_WARMBOOT:       0/      1     0%
+
+Info: Placed 0 cells based on constraints.
