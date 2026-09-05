@@ -1,0 +1,61 @@
+{
+  "sha": "1e9767150b8935f128db7ce909201d3f8d81a8ac",
+  "url": "https://api.github.com/repos/SuperInstance/quilt-mesh/git/trees/1e9767150b8935f128db7ce909201d3f8d81a8ac",
+  "tree": [
+    {
+      "path": ".gitignore",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5c9fe8cebce81c36bb85df6a42207fc3f3e39762",
+      "size": 35,
+      "url": "https://api.github.com/repos/SuperInstance/quilt-mesh/git/blobs/5c9fe8cebce81c36bb85df6a42207fc3f3e39762"
+    },
+    {
+      "path": "Cargo.toml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "880368923369a4508fe7dea4e2c8175a4e52bebc",
+      "size": 326,
+      "url": "https://api.github.com/repos/SuperInstance/quilt-mesh/git/blobs/880368923369a4508fe7dea4e2c8175a4e52bebc"
+    },
+    {
+      "path": "README.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5358d577d4d181d58b7848ffb2c697e78efc0dac",
+      "size": 10771,
+      "url": "https://api.github.com/repos/SuperInstance/quilt-mesh/git/blobs/5358d577d4d181d58b7848ffb2c697e78efc0dac"
+    },
+    {
+      "path": "assets",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "b9c0c946c9eb2517badc3102b412cb1b4571c45f",
+      "url": "https://api.github.com/repos/SuperInstance/quilt-mesh/git/trees/b9c0c946c9eb2517badc3102b412cb1b4571c45f"
+    },
+    {
+      "path": "assets/splash.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8bbfc2f5a9ad45eaff3af3e641fb7c63c69a7131",
+      "size": 2437023,
+      "url": "https://api.github.com/repos/SuperInstance/quilt-mesh/git/blobs/8bbfc2f5a9ad45eaff3af3e641fb7c63c69a7131"
+    },
+    {
+      "path": "src",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "d4aee9ea7b7002bd4940cb4aba414629a7b8aa1a",
+      "url": "https://api.github.com/repos/SuperInstance/quilt-mesh/git/trees/d4aee9ea7b7002bd4940cb4aba414629a7b8aa1a"
+    },
+    {
+      "path": "src/lib.rs",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8828e8afe5d9649935116c4d3edede89274f0c15",
+      "size": 9400,
+      "url": "https://api.github.com/repos/SuperInstance/quilt-mesh/git/blobs/8828e8afe5d9649935116c4d3edede89274f0c15"
+    }
+  ],
+  "truncated": false
+}
