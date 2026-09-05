@@ -1,0 +1,23 @@
+16. Printing statistics.
+
+=== q_fabric_top ===
+
+   Number of wires:              10314
+   Number of wire bits:          31971
+   Number of public wires:       10314
+   Number of public wire bits:   31971
+   Number of ports:                 21
+   Number of port bits:            157
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:              15913
+     $scopeinfo                     30
+     SB_CARRY                     1906
+     SB_DFF                         47
+     SB_DFFE                       490
+     SB_DFFESR                    2553
+     SB_DFFESS                      50
+     SB_DFFSR                      580
+     SB_LUT4                     10257
+
