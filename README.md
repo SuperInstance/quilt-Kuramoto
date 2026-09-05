@@ -12,6 +12,17 @@ provenance headers in the source files as evidence. **No file content was
 modified.** 128 files were deleted: failed downloads and exact duplicates, all
 itemised in [`docs/REMOVED.md`](docs/REMOVED.md).
 
+> ## ⚠️ Read `docs/UPSTREAM-DELTA.md` before using any code here
+>
+> Every source unit under `code/` has been diffed against its live repo in the
+> `SuperInstance` org. **Every file is byte-identical to upstream, and every
+> upstream repo is substantially larger.** The `quilt-verilog` harvest is 9% of
+> the real repository (96 files of 1018) — missing its testbenches, most of its
+> formal proofs, and its 353-file adversarial review.
+>
+> **Use the upstream repos.** This tree is a provenance snapshot of one harvest,
+> not a source of truth, and nothing here should be forked into a new repo.
+
 ## Read this first: there is no single "Quilt"
 
 At least five distinct technical artifacts in here use the name "Quilt" and the
