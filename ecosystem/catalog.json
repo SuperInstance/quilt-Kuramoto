@@ -1,0 +1,512 @@
+{
+  "generated": "2026-09-05",
+  "scope": "live SuperInstance GitHub org, read at source where it mattered",
+  "method": "5 scout agents; repo search + shallow clones + file-level verification",
+  "org_scale": {
+    "profile_claims": "500+ repos",
+    "observed_distinct_names": 1000,
+    "note": "GitHub search caps at 1000 results; true total is higher",
+    "prefix_counts": {
+      "ternary-": 386,
+      "fleet-": 323,
+      "plato-": 294,
+      "flux-": 192,
+      "si-": 113,
+      "quilt-": 95,
+      "cocapn-": 68,
+      "constraint-": 66
+    }
+  },
+  "mass_creation_events": [
+    {
+      "date": "2026-05-21",
+      "what": "~100 generic-description stubs",
+      "state": "cold"
+    },
+    {
+      "date": "2026-06-04..08",
+      "what": "ternary-* and si-* bursts",
+      "state": "frozen 2026-07-12"
+    },
+    {
+      "date": "2026-07-12/13",
+      "what": "plato-*, sheaf/spectral, Working-Animal",
+      "state": "cold"
+    }
+  ],
+  "only_active_line": [
+    "quilt substrate",
+    "live-canon",
+    "F1xx marine/edge series"
+  ],
+  "exact_arithmetic_assessment": {
+    "user_idea": "sample on Pythagorean angles, carry tolerance around what is sure, instead of floating point",
+    "built_and_exact": [
+      {
+        "repo": "quilt-verilog",
+        "artifact": "docs/academic/THE-BREAKDOWN.md Theorem 4a + error-envelopes.md \u00a74",
+        "claim": "covering radius of b*Z^n is exactly b*sqrt(n)/2; b <= 2eps/sqrt(n) sufficient; squared-form judge has ZERO comparison error",
+        "pythagorean_definition": "reachable set subset of {v in Z^n : ||v|| in Z} -> distance 0, arithmetic exact by construction",
+        "machine_checked": "tb/tb_judge_consistency.v, ~2325 vectors, n in {1,2,3}, error equals b*sqrt(n)/2 exactly at deep holes",
+        "negative_control": "b+1 breaks the guarantee at the deep hole in every dimension",
+        "enforcement": [
+          "tools/tower/emith.py refuses inexact bases: if (span_psi*den) % num != 0: raise CellError",
+          "tools/tower/verify.py greps generated C for float/double; prints 'floats: none in generated C'"
+        ],
+        "verdict": "strongest; genuinely integer, proven, machine-checked, float-freedom verified not asserted"
+      },
+      {
+        "repo": "eisenstein",
+        "type": "E12 { a: i32, b: i32 }",
+        "norm": "a*a - a*b + b*b, pure integer",
+        "tests": 226,
+        "no_std": true,
+        "deps": "zero required",
+        "note": "the real deadband_ring lives here, not in constraint-theory-core",
+        "verdict": "genuinely exact; float only via opt-in snap feature"
+      }
+    ],
+    "built_but_float": [
+      {
+        "repo": "constraint-theory-core",
+        "version": "2.2.0",
+        "published": "crates.io",
+        "type": "PythagoreanTriple { a: f32, b: f32, c: f32 }",
+        "snap_returns": "([f32;2], f32 noise)",
+        "real": [
+          "PythagoreanManifold via Euclid formula",
+          "KD-tree O(log N)",
+          "Laman rigidity",
+          "H0/H1 cohomology",
+          "HolonomyChecker"
+        ],
+        "description_overclaims": [
+          "deadband funnels",
+          "metronome consensus",
+          "Eisenstein lattices"
+        ],
+        "evidence": "those three words appear nowhere in src/, only in AGENT.md marketing copy",
+        "caveats": [
+          "SIMD batch path may tie-break differently from scalar; README says use scalar snap_batch for consensus-critical code",
+          "dcs.rs asserts RICCI_CONVERGENCE_MULTIPLIER=1.692 'matches' an external law to 3sf with no derivation - numerology in a test harness"
+        ]
+      },
+      {
+        "repo": "pythagorean48-codes",
+        "type": "TrustVector(u8) index into (i16,i16,i16,i16) table",
+        "tests": 4,
+        "missing": "README promises compose() for 'unlimited hops without drift'; it does not exist in the 101-line source"
+      }
+    ],
+    "not_built_anywhere": {
+      "what": "an exact value carrying its tolerance band as a first-class field, with that band driving when something fires",
+      "why": [
+        "tolerance is always a post-hoc float scalar (noise/err/tolerance) - a RESULT of snapping, not an input band",
+        "no ExactAngle { value, band } type exists in any repo",
+        "no time-as-angle mapping: every t-minus timing type is f64/Duration, every exact type is i32/u8",
+        "no shared trait connects the two sides",
+        "no tolerance propagation through the predict/confirm state machine - has_quorum() is a boolean count gate"
+      ],
+      "unverified_candidates": [
+        "constraint-tminus-bridge",
+        "holonomy-48-bridge"
+      ],
+      "assessment": "real, novel, small, and the piece worth writing"
+    }
+  },
+  "tminus_family": {
+    "canonical": "swarm-tminus",
+    "language": "Python, stdlib only",
+    "tests": 301,
+    "consolidates": [
+      "t-minus",
+      "t-minus-rs",
+      "tminus-music",
+      "lau-tminus",
+      "tick-engine",
+      "terax-fleet-modules"
+    ],
+    "protocol": {
+      "CountdownEvent": "quorum_required, confirmed_count(), has_quorum(); SCHEDULED/COUNTING -> FIRED or MISSED",
+      "Predictor": "add_prediction(beats_ahead, confidence), advance(beats), confirm(id)"
+    },
+    "scattered_at": "Rust/JS layer - six overlapping implementations written separately"
+  },
+  "quilt_verilog_experiments": [
+    {
+      "name": "E1 interference tick",
+      "result": "VALIDATED under stress (~20% fewer corrections, 83% vs 52% in deadband); WORSE at gentle params (45.5% vs 56.7%)",
+      "note": "a conflict-resolution regime, not a free lunch",
+      "folded_into_rtl": false
+    },
+    {
+      "name": "E2 quilt-as-dataset",
+      "result": "VALIDATED - 471777 records, +12.1pp over majority on unseen cohort grammar",
+      "folded_into_rtl": false
+    },
+    {
+      "name": "model arena",
+      "result": "granite3.1-dense:2b beat the hand-tuned strategy 93.2% vs 83.1%",
+      "folded_into_rtl": false
+    },
+    {
+      "name": "E1 ICL curriculum",
+      "result": "FALSIFIED - 1.2B model is a constant predictor; real ~ shuffled ~ no context",
+      "folded_into_rtl": false
+    },
+    {
+      "name": "E3 self-improvement loop",
+      "result": "COLLAPSED in 3 rounds - gate starved its own training corpus; classic self-training distribution shift",
+      "folded_into_rtl": false
+    }
+  ],
+  "hostile_consumer": {
+    "what": "deliberately blind spec-only red team of the QUF format",
+    "found": "11 spec bugs F1-F12, ALL closed with rules R1-R18, reason codes E7-E18, and a mutant regression corpus",
+    "sharpest": [
+      "a hostile file could point the dials section into the KV metadata region and satisfy every stated rule",
+      "renaming epoch.1 -> epoch.05 makes a spec-faithful consumer silently not-see an epoch"
+    ],
+    "parallel_pass": "docs/BACKEND-NOTES.md found 23 bug classes incl. a single-section QUF that booted clean WITHOUT LOADING ITS ONLY SECTION",
+    "assessment": "most valuable directory in the org"
+  },
+  "redundancy": [
+    {
+      "thing": "ternary math",
+      "built_as": "~50 separate one-concept crates",
+      "should_be": "one crate with submodules",
+      "examples": [
+        "ternary-graph",
+        "ternary-regex",
+        "ternary-hash",
+        "ternary-paxos",
+        "ternary-quorum",
+        "ternary-zkp",
+        "ternary-knn",
+        "ternary-svm",
+        "ternary-transformer"
+      ]
+    },
+    {
+      "thing": "exocortex",
+      "times_built": 7,
+      "repos": [
+        "exocortex",
+        "exocortex-core",
+        "exocortex-rs",
+        "exocortex-kernel-c",
+        "exocortex-mcp-ts",
+        "si-exocortex-rs",
+        "recovered-copy-...-si-exocortex-rs"
+      ]
+    },
+    {
+      "thing": "spectral graph theory",
+      "times_built": 4,
+      "plus": "five overlapping sheaf libraries"
+    },
+    {
+      "thing": "multi-model orchestrator",
+      "times_built": 3,
+      "same_day": "2026-08-03",
+      "repos": [
+        "baton-orchestrator (KimiCode)",
+        "slackwater-orchestrator (GLM-5.2)",
+        "salidiere (Claude Sonnet 5)"
+      ],
+      "cross_references": 0
+    },
+    {
+      "thing": "Quilt entry point",
+      "times_built": 4,
+      "window": "2 days",
+      "repos": [
+        "quilt-system",
+        "quilt-foundation",
+        "quilt-core-os",
+        "quilt-base"
+      ]
+    },
+    {
+      "thing": "Live Canon packaging",
+      "times_built": 7,
+      "targets": [
+        "PyPI",
+        "npm",
+        "GitHub Packages",
+        "CLI"
+      ]
+    },
+    {
+      "thing": "private/public twins",
+      "count": 8,
+      "note": "created in the same minute"
+    },
+    {
+      "thing": "recovery copies",
+      "count": 70,
+      "repos": "59 recovered-copy-20260824-* plus 11 rc-20260824-NN"
+    },
+    {
+      "thing": "agent lifecycle metaphor",
+      "times_built": 4,
+      "systems": [
+        "Working-Animal",
+        "Cocapn/crab",
+        "Fleet/vessel",
+        "PLATO/room"
+      ],
+      "note": "same underlying problem, four vocabularies, mostly non-interoperating"
+    }
+  ],
+  "ready_to_depend_on": [
+    {
+      "repo": "constraint-theory-py",
+      "tests": 167,
+      "lang": "Python"
+    },
+    {
+      "repo": "eisenstein",
+      "tests": 226,
+      "lang": "Rust",
+      "no_std": true,
+      "install": "cargo add eisenstein"
+    },
+    {
+      "repo": "swarm-tminus",
+      "tests": 301,
+      "lang": "Python",
+      "install": "pip install swarm-tminus"
+    },
+    {
+      "repo": "constraint-theory-core",
+      "tests": 83,
+      "lang": "Rust",
+      "install": "cargo add constraint-theory-core",
+      "caveat": "f32 not exact; ignore its deadband/metronome claims"
+    },
+    {
+      "repo": "mudra-vessel-bridge",
+      "tests": 51,
+      "lang": "Python"
+    },
+    {
+      "repo": "quilt-substrate-meta",
+      "tests": 36,
+      "lang": "C",
+      "extras": [
+        "prover",
+        "synthesizer"
+      ]
+    },
+    {
+      "repo": "quilt-types",
+      "tests": 16
+    },
+    {
+      "repo": "quilt-gc",
+      "tests": 12
+    },
+    {
+      "repo": "quilt-opt",
+      "tests": 11
+    }
+  ],
+  "underrated": [
+    "nmea-quilt-cell",
+    "provenance-log",
+    "deckhand-rs",
+    "fibonacci-fence",
+    "quilt-substrate-meta",
+    "sheaf-agents-rs",
+    "federated-tinyml-vessel",
+    "mudra-vessel-bridge",
+    "fleet-functions",
+    "plato-engine-block-c"
+  ],
+  "reusable_beyond_fpga_from_quilt_verilog": [
+    {
+      "piece": "tools/tower/emith.py",
+      "what": "YAML spec -> dependency-free C, refuses inexact bases",
+      "verilog_coupling": "none",
+      "extraction_cost": "near zero"
+    },
+    {
+      "piece": "QUF binary state format",
+      "what": "GGUF-styled flat container, hostile-input rules closed",
+      "verilog_coupling": "RTL is one consumer profile",
+      "extraction_cost": "already done, tools/quf.py is stdlib-only"
+    },
+    {
+      "piece": "ladder/hyperbola decay engines",
+      "what": "integer power-law forgetting, proven W <= W_hat <= 2W",
+      "extraction_cost": "trivial, ~40 lines"
+    },
+    {
+      "piece": "formal/audit_snapshot.py",
+      "what": "parses solver logs into machine-readable verdicts; refuses to fabricate a verdict for an absent workdir",
+      "extraction_cost": "low"
+    },
+    {
+      "piece": "squared-form Schmitt-trigger judge",
+      "what": "integer deadband control law, no sqrt no float",
+      "extraction_cost": "trivial"
+    }
+  ],
+  "meta_repo": {
+    "repo": "SuperInstance/SuperInstance",
+    "what": "doctrine corpus + docs index, not a monorepo/registry/build system",
+    "real_machine_readable_asset": {
+      "file": "quilt-schema.json",
+      "spec": "JSON-Schema draft-07, v0.6.0",
+      "id": "https://superinstance.dev/schemas/quilt.schema.json",
+      "covers": "Quilt cell model: 8 primitives, 7 substrate layers, 9 elephant dials"
+    },
+    "broken": [
+      "INDEX.md contains literal unsubstituted $(date -u ...) and comment '<!-- Warning: gh repo list returned empty output -->'",
+      "~25 top-level directories named after other repos are all empty",
+      "federated-tinyml family not registered in PACKAGES.md despite doctrine requiring it"
+    ],
+    "count_disagreement": {
+      "README_badge": "4,000+",
+      "STATUS_BOARD.md_2026-07-12": 4098,
+      "CATALOG.md_regenerated_2026-09-05": 2000,
+      "note": "freshest artifact shows half the two-month-old count; nothing reconciles them"
+    },
+    "tests_claim": {
+      "claimed": "6000+",
+      "status": "circular and unverified",
+      "trace": "a sentence in CONTRIBUTING.md, copied into the auto-generated CATALOG.md, then cited as evidence",
+      "actual_ci": "a Node smoke test of two npm packages"
+    },
+    "doctrine": {
+      "lifecycle": "sketch -> polished -> shipped",
+      "archival": "we archive, we don't delete",
+      "naming": [
+        "flux-<lang>",
+        "plato-<lang>"
+      ],
+      "ternary_crates": "10+ tests minimum, register in PACKAGES.md"
+    }
+  },
+  "federated_tinyml_vessel": {
+    "architecture": "log-mel(60) -> MFCC+d+dd -> 180-dim -> frozen 180x64 backbone (12544 params, 50KB) -> L2 -> 64-dim -> trainable 64x5 head (325 params, 1.3KB)",
+    "measured": {
+      "synthetic_accuracy": "95-100% over 6 configs (audio is sine waves + coloured noise)",
+      "real_audio_ESC50": "52.5% (5 classes, 20% baseline) <-- the number that matters",
+      "whisper_backbone": "26.7%",
+      "robust_under_adversary": "TrimmedMean 28% vs FedAvg 20% (chance floor 20%)",
+      "fnv1a_cross_substrate": "0x5fd69fcc4833d9fc identical across Python/JS/C/Rust",
+      "int4_head": "173 bytes, no synthetic accuracy loss, NOT used on the wire",
+      "max_devices_ever_run": 10
+    },
+    "claimed_not_measured": [
+      "<100ms wire latency",
+      "0.3ms ESP32 inference",
+      "on-device training never run"
+    ],
+    "bottlenecks_ordered": [
+      {
+        "rank": 1,
+        "what": "round synchronisation",
+        "detail": "hardcoded quorum >=3; device_client hardcodes round=0 so round is never validated; no deadline at all",
+        "fix": "quorum = min(N, ceil(P*fleet)); real round id echoed and validated; close on quorum or timeout"
+      },
+      {
+        "rank": 2,
+        "what": "version skew",
+        "detail": "no backbone tag on uploads; FedAvg will silently average semantically incompatible heads during staggered rollout",
+        "fix": "tag each upload with backbone state hash; bucket or reject mismatches"
+      },
+      {
+        "rank": 3,
+        "what": "wire format",
+        "detail": "JSON float arrays despite a working 173-byte int4 packing sitting unused",
+        "fix": "ship the bytes you already produce"
+      },
+      {
+        "rank": 4,
+        "what": "aggregation topology",
+        "detail": "single-process ThreadingMixIn, in-memory dict, no persistence",
+        "fix": "hierarchical per-vessel then fleet-level"
+      },
+      {
+        "rank": 5,
+        "what": "non-IID",
+        "detail": "best-covered: Dirichlet split + TrimmedMean/CoordMedian/Krum, but only to alpha=0.3 and 10 devices",
+        "fix": "per-fishing-ground sub-federations"
+      }
+    ],
+    "reuse": [
+      {
+        "repo": "quilt-mesh",
+        "role": "transport",
+        "fit": "CellEvent value is Vec<u8>, serialized head goes in directly; offline-first matches the 50nm-offshore story",
+        "caveat": "resolves last-writer-wins by Lamport on a single value - it does NOT average; also self-described as 'a design sketch'"
+      },
+      {
+        "repo": "MerkleMesh",
+        "role": "contribution audit",
+        "fit": "fold per-device ledger entries into a fleet root per round; prove inclusion after the fact",
+        "caveat": "operates on quilt JSONL ledger format, not raw blobs"
+      },
+      {
+        "repo": "swarm-tminus",
+        "role": "round timing",
+        "fit": "CountdownEvent quorum+deadline is exactly the missing maybe_fedavg() logic",
+        "caveat": "none material; highest value lowest effort"
+      }
+    ],
+    "headline": "scaling is real but not first; 52.5% on real audio is. federating a 52.5% classifier to 1000 devices yields 1000 devices wrong half the time"
+  },
+  "build_proposals": [
+    {
+      "id": "P1",
+      "name": "exact-band",
+      "effort": "small",
+      "new": "band propagation through composition + narrow() so confirmation shrinks a band",
+      "depends": [
+        "eisenstein::E12",
+        "quilt-verilog Theorem 4a",
+        "deadband-rs::div360"
+      ],
+      "test": "port tb_judge_consistency.v incl. its negative control where b+1 must break the guarantee"
+    },
+    {
+      "id": "P2",
+      "name": "tminus-banded",
+      "effort": "small-medium",
+      "new": "exact bands drive firing; phase-lock as band intersection in integers",
+      "depends": [
+        "P1",
+        "swarm-tminus (301 tests)"
+      ],
+      "also_fixes": "federated-tinyml hardcoded <3 quorum"
+    },
+    {
+      "id": "P3",
+      "name": "tower extraction",
+      "effort": "near-zero to extract, medium to generalise",
+      "what": "lift tools/tower/emith.py out of the FPGA repo; zero Verilog coupling; refuses inexact bases and greps its own output for floats",
+      "note": "highest value per hour"
+    },
+    {
+      "id": "P4",
+      "name": "ternary consolidation",
+      "effort": "medium, mechanical",
+      "what": "collapse ~50 frozen crates into one crate with feature flags; archive originals per own doctrine"
+    },
+    {
+      "id": "P5",
+      "name": "fix the org index",
+      "effort": "hours",
+      "what": "INDEX.md is broken, counts disagree 3 ways, 6000+ tests is circular, 25 empty stub dirs",
+      "note": "cheapest credibility repair; the file everyone reads first"
+    }
+  ],
+  "do_not_build": [
+    "new repos from quilt-Kuramoto/code/ (byte-identical to upstream, 9% complete)",
+    "anything justified by the quantum bridge (own benchmark refuted it)",
+    "a fifth metaphor system for agent lifecycle"
+  ]
+}
