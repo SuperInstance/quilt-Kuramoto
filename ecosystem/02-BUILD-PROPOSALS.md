@@ -46,6 +46,17 @@ vectors, n ∈ {1,2,3}, error must equal `b√n/2` *exactly* at deep holes — a
 its **negative control**, where `b+1` must break the guarantee. A test suite that
 only passes proves nothing.
 
+**Why now, specifically.** Your own Phase 7 (papers ~392–478, Sep 1–4) already
+pivoted to **quantile bands over forecasts**, CRDT-mergeable forecasts, and
+`quf://` URIs. The band idea is *already in your writing*. What is missing is the
+exact-integer type underneath it. P1 is not a new direction — it is the missing
+implementation of the direction you already took.
+
+And the reason the join was never made is now known, not guessed. From the corpus:
+t-minus *"never gets absorbed into the 5-opcode canon — an orphaned practical
+pattern that TICK could have subsumed but didn't."* TICK took the vocabulary;
+t-minus kept the mechanism. Reconnecting them is the work.
+
 **Effort:** small. Days, not weeks.
 
 ---

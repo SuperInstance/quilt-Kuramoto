@@ -470,7 +470,8 @@
         "quilt-verilog Theorem 4a",
         "deadband-rs::div360"
       ],
-      "test": "port tb_judge_consistency.v incl. its negative control where b+1 must break the guarantee"
+      "test": "port tb_judge_consistency.v incl. its negative control where b+1 must break the guarantee",
+      "why_now": "Phase 7 already pivoted to quantile bands over forecasts; P1 is the missing exact-integer type under a direction already taken"
     },
     {
       "id": "P2",
@@ -508,5 +509,125 @@
     "new repos from quilt-Kuramoto/code/ (byte-identical to upstream, 9% complete)",
     "anything justified by the quantum bridge (own benchmark refuted it)",
     "a fifth metaphor system for agent lifecycle"
-  ]
+  ],
+  "corpus_evolution": {
+    "repo": "SuperInstance/AI-Writings",
+    "files": 13874,
+    "timeline": {
+      "first_dated": "2026-04-24",
+      "last_dated": "2026-09-04",
+      "span_weeks": 19,
+      "org_oldest_repos": "cocapn Feb 2026, constraint-theory-core Mar 2026",
+      "correction": "project is ~6-7 months old, not a year; density back-loaded, 60-300+ files/day from Aug 5"
+    },
+    "papers": {
+      "range": "127-478",
+      "count": 352,
+      "gap": "321-325",
+      "correction": "earlier report of ~100 papers 127-226 described only the harvest in this archive",
+      "other_tracks": [
+        "seed-canon/00-122 pre-paper spec",
+        "fables 1-90",
+        "stories 1-93",
+        "scenarios 1-30",
+        "a separate top-level papers/220-227 that collides with seed-canon/papers/"
+      ]
+    },
+    "phases": [
+      {
+        "n": 0,
+        "when": "Apr 24 - Jun 15",
+        "what": "working infrastructure, no mythology; raw diaries"
+      },
+      {
+        "n": 1,
+        "when": "May 22",
+        "what": "brief academic register with real citations"
+      },
+      {
+        "n": 2,
+        "when": "Jul 9-20",
+        "what": "scale panic; THE PARADIGM SHIFT: 'agent' retracted for 'working animal'",
+        "dated_doc": "diaries/2026-07-12-the-paradigm-shift.md"
+      },
+      {
+        "n": 3,
+        "when": "Aug 22-24",
+        "what": "substrate spec: 11 primitives, witness log, fog-of-war decay, 5 theorems"
+      },
+      {
+        "n": 4,
+        "when": "Aug 24 - Sep 1",
+        "what": "opcode explosion, papers 127-~300; one isomorphism, dozens of nouns; weakest stretch"
+      },
+      {
+        "n": 5,
+        "when": "papers 178/245/280",
+        "what": "self-scrutiny; FORGET added as 6th opcode"
+      },
+      {
+        "n": 6,
+        "when": "Sep 1-3",
+        "what": "polyformalism as fact: byte-exact hashes across C99/Rust/TS/Haskell/WASM/Verilog/VHDL"
+      },
+      {
+        "n": 7,
+        "when": "Sep 1-4",
+        "what": "FORECASTING PIVOT: quantile bands, quf:// URIs, CRDT-mergeable forecasts, shape RAG, robotic control; paper-415 claims a forecaster beats LQR"
+      }
+    ],
+    "why_tminus_join_missing": "corpus states t-minus 'never gets absorbed into the 5-opcode canon - an orphaned practical pattern that TICK could have subsumed but didn't'",
+    "stuck": [
+      "witness log",
+      "5 opcodes",
+      "cell as (name,value,identity)",
+      "the cowboy ritual",
+      "double-entry ledger",
+      "fog-of-war decay"
+    ],
+    "dropped": [
+      {
+        "from": "agent",
+        "to": "working animal",
+        "when": "2026-07-12",
+        "announced": true
+      },
+      {
+        "from": "Paper NNN",
+        "to": "F-number",
+        "when": "~Sep 1",
+        "announced": false
+      },
+      {
+        "from": "5 opcodes",
+        "to": "5+1 then self-mocked inflation",
+        "announced": true
+      },
+      {
+        "from": "t-minus",
+        "to": "absorbed-in-name-only by TICK",
+        "announced": false
+      }
+    ],
+    "most_rigorous_document": {
+      "file": "papers/224-litmus-run.md",
+      "date": "2026-08-30",
+      "why": [
+        "catches its own design as degenerate (p=1 freezes both arms, unfalsifiable)",
+        "repaired version still FAILS the paper's own pass criterion, and says so",
+        "records 3 bugs in its own reference implementation, caught by cross-lane comparison",
+        "third adversarial model as gatekeeper; amendments applied verbatim with changelog",
+        "cites real RTL: rtl/q_cell_core.v:127, commit 3cfac34, tb_fabric_smoke_v2.v"
+      ]
+    },
+    "papers_that_specify_shipped_code": [
+      "439/440 (F129/F130) -> quilt-live-canon worker.js",
+      "185 -> cited by COLLECTION.md to resolve a repo taxonomy conflict",
+      "224-litmus-run -> tests real RTL at a named commit",
+      "410 (F100) -> documents quilt-substrate v4.0 as built",
+      "460 (F148) -> records which 9 papers reached production"
+    ],
+    "dedekind_correction_location": "quilt-wiki-2126/monotone_crystal.py logs 'REFUTATION FOUND (2026-08-31)' against OEIS A000372 - NOT in AI-Writings",
+    "weakest": "papers ~141-267 are a template executed across neuroscience/cities/rivers/forests/mountains; no repo cites any of them"
+  }
 }
