@@ -56,6 +56,14 @@ say "divergence study: is any of this worth using?"
 # control on itself, so a study with no contrast fails rather than reassures.
 ( cd divergence && make --no-print-directory check )
 
+say "h4-recheck: does the corpus's strongest claim reproduce?"
+# It does not. diagnose.py reproduces five defects in the vendored experiment as
+# assertions; fair.py runs the corrected version and asserts the inverted result
+# across 16 parameter settings. Both are here so the finding stays a program
+# rather than a paragraph.
+( cd h4-recheck && python3 diagnose.py >/dev/null && python3 fair.py >/dev/null \
+  && echo "  ok  five defects reproduce; corrected experiment inverts the conclusion" )
+
 say "conformance stream: do all three substrates fold to the same checksum?"
 # The golden file pins cases someone chose. The stream covers the ones nobody
 # did: each substrate walks the same pseudo-random sequence and folds every

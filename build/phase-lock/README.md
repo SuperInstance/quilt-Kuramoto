@@ -213,10 +213,17 @@ uncertain and far from consensus — which is when it most needs to move.
 This does **not** refute band-based coordination generally. It refutes it *for
 this task*. Phase-locking is a tight, fast, fully-observable control loop — the
 regime where a plain proportional controller is near-optimal and any estimator
-is pure overhead. Notably, the corpus's own H4 claim for predict-and-confirm is
-scoped to "the coordination regime, not the control regime". This result is
-consistent with that scoping, and it shows the idea does not silently generalise
-past it.
+is pure overhead.
+
+An earlier version of this paragraph cited the corpus's H4 experiment here, as
+independent evidence that predict-and-confirm is scoped to "the coordination
+regime, not the control regime". **That citation is withdrawn.** H4's headline
+result is an artifact of a harness that disabled learning in one of its two arms;
+see [`../h4-recheck/`](../h4-recheck/README.md), where the defects are reproduced
+as assertions against the original code. The negative result above does not
+depend on it — it rests on `run_band_study.py` and the tests below — but it was
+wrong to lean on H4 for corroboration, and the scoping it appeared to confirm now
+has no measured support behind it.
 
 The negative result is pinned by tests, so a later change cannot quietly move
 the claim.

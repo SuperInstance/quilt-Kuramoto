@@ -359,10 +359,12 @@ uncertain and far from consensus — which is when it most needs to move.
 
 **Scope.** This does not refute band-based coordination generally; it refutes it
 for a tight, fast, fully-observable control loop, where a plain proportional
-controller is near-optimal and any estimator is overhead. The corpus's own H4
-claim is scoped to "the coordination regime, not the control regime" — this
-result is consistent with that scoping and shows the idea does not silently
-generalise past it.
+controller is near-optimal and any estimator is overhead.
+
+This previously cited the corpus's H4 experiment as independent corroboration of
+that scoping. **Withdrawn** — H4's headline 11.8× is an artifact of a harness in
+which one arm never learned at all (`build/h4-recheck/`). The negative result
+here stands on its own data; the corroboration does not exist.
 
 Attempt 2 is independently useful: it is the over-confidence trap measured
 directly. A narrow band that is wrong resists correction, so agents commit hard

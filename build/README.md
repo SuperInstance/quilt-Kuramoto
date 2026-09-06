@@ -3,7 +3,14 @@
 Code written here that does **not** belong in this archive long-term. Each
 directory is a complete standalone project waiting for its own repository.
 
-**Start with [`divergence/`](divergence/README.md).** Everything else here
+**Start with [`h4-recheck/`](h4-recheck/README.md)** if you have read the
+`quilt-quantum-research-complete` package: its headline result — "the strongest
+measured result in the documentation set", 11.8×, accepted by all four of its
+judges — is an artifact of a harness that disabled one arm. Five defects, each
+reproduced as an assertion against the original code, and a corrected experiment
+that inverts the conclusion.
+
+**Start with [`divergence/`](divergence/README.md)** otherwise. Everything else here
 verifies that these libraries are *correct*; that directory is the only thing
 that measures whether they are *worth using* — and two of its three findings cut
 against this repo's own framing. Doubles turn out to be accurate; naive integers
