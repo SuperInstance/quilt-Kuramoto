@@ -77,3 +77,71 @@ fn a_squared_difference_would_get_this_wrong() {
     assert_eq!(correct, 2);
     assert!(naive > 128_000, "the naive squared form is off by two orders of magnitude");
 }
+
+// --- odd circles ---------------------------------------------------------
+// These caught a real bug. `offset_to` originally compared `d > n / 2`, and
+// integer division truncates, so on an odd circle the half-way point rounded
+// down and offsets that were already shortest got flipped the long way round.
+// Every test above used N=360, so none of them could see it.
+
+#[test]
+fn offset_magnitude_equals_distance_on_odd_circles() {
+    fn check<const N: u32>() {
+        for a in 0..N as i64 {
+            for b in 0..N as i64 {
+                let (p, q) = (Phase::<N>::new(a), Phase::<N>::new(b));
+                assert_eq!(p.offset_to(q).unsigned_abs() as u32, p.distance(q),
+                    "N={N} a={a} b={b}");
+            }
+        }
+    }
+    check::<5>();
+    check::<7>();
+    check::<9>();
+    check::<361>();
+}
+
+#[test]
+fn offset_never_exceeds_half_the_circle_on_odd_rings() {
+    fn check<const N: u32>() {
+        for a in 0..N as i64 {
+            for b in 0..N as i64 {
+                let d = Phase::<N>::new(a).offset_to(Phase::<N>::new(b));
+                assert!(2 * d.abs() <= N as i64,
+                    "N={N}: offset {d} is longer than half the circle");
+            }
+        }
+    }
+    check::<5>();
+    check::<7>();
+    check::<9>();
+    check::<11>();
+}
+
+#[test]
+fn offset_is_antisymmetric_on_odd_circles() {
+    for a in 0..7i64 {
+        for b in 0..7i64 {
+            let (p, q) = (Phase::<7>::new(a), Phase::<7>::new(b));
+            assert_eq!(p.offset_to(q), -q.offset_to(p), "N=7 a={a} b={b}");
+        }
+    }
+}
+
+#[test]
+fn the_specific_case_that_was_wrong() {
+    // N=7, from slot 0 to slot 4: the short way is backwards by 3, not
+    // forwards by 4. The old code returned 4.
+    assert_eq!(Phase::<7>::new(0).offset_to(Phase::<7>::new(4)), -3);
+    assert_eq!(Phase::<7>::new(0).distance(Phase::<7>::new(4)), 3);
+    // N=361, the even/odd boundary case.
+    assert_eq!(Phase::<361>::new(0).offset_to(Phase::<361>::new(181)), -180);
+}
+
+#[test]
+fn degenerate_tiny_circles_still_behave() {
+    assert_eq!(Phase::<2>::new(0).distance(Phase::<2>::new(1)), 1);
+    assert_eq!(Phase::<2>::new(0).offset_to(Phase::<2>::new(1)), 1);
+    assert_eq!(Phase::<3>::new(0).offset_to(Phase::<3>::new(2)), -1);
+    assert_eq!(Phase::<3>::new(0).distance(Phase::<3>::new(2)), 1);
+}

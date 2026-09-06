@@ -63,16 +63,23 @@ impl<const N: u32> Phase<N> {
         if d < around { d } else { around }
     }
 
-    /// Signed shortest offset from `self` to `other`, in `(−N/2, N/2]`.
+    /// Signed shortest offset from `self` to `other`.
     ///
-    /// Positive means `other` is ahead. This is the exact analogue of the
+    /// Positive means `other` is ahead. The magnitude always equals
+    /// [`distance`](Self::distance). This is the exact analogue of the
     /// `sin(θ_j − θ_i)` term's *sign and magnitude* without any trigonometry.
+    ///
+    /// The range is `(−N/2, N/2]` for even `N` and `[−(N−1)/2, (N−1)/2]` for
+    /// odd `N`. The comparison is written `2·d > n` rather than `d > n / 2`
+    /// precisely because `n / 2` truncates: on an odd circle that rounds the
+    /// half-way point down and flips offsets that were already shortest.
     #[inline]
     pub const fn offset_to(self, other: Self) -> i64 {
         let n = N as i64;
+        // slots are already reduced into [0, N), so this difference is in (−N, N)
         let mut d = other.slot as i64 - self.slot as i64;
-        if d > n / 2 { d -= n; }
-        if d <= -n / 2 { d += n; }
+        if d < 0 { d += n; }
+        if 2 * d > n { d -= n; }
         d
     }
 

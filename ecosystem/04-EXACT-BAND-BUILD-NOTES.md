@@ -366,3 +366,26 @@ as an argument.
 
 The negative result is pinned by six tests so a later change cannot quietly move
 the claim.
+
+## A bug that only existed on odd circles
+
+`exact_band::Phase::offset_to` compared `d > n / 2`. Integer division truncates,
+so on an **odd** ring the half-way point rounds down and offsets that were
+already shortest get flipped the long way round. On N=7, slot 0 → slot 4 returned
+**+4** when the shortest path is **−3** — longer than half the circle, and in
+violation of the function's own documented range.
+
+Every test and every conformance vector used N=360. Even rings are unaffected, so
+nothing could see it. It surfaced only from auditing my own code for the *other*
+sign bug (the floor-division bias in the band centre) and noticing the same
+truncation shape.
+
+Fixed by comparing `2 · d > n`, which never truncates. Verified at zero
+divergences against the Python semantics for N ∈ {2, 3, 5, 7, 9, 360, 361, 1000}.
+
+The structural fix matters more than the point fix: the vector generator now
+emits **231 phase vectors over N = 2, 3, 5, 7, 12**, and `phase-lock`'s `Ring`
+is checked against all of them. The fixture also asserts odd rings are present,
+so a future regeneration cannot quietly drop them and make the tests vacuous.
+
+Total conformance vectors: 471, up from 240.

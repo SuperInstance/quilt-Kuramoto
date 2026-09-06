@@ -7,7 +7,7 @@
 //!
 //! Run: `cargo run --release --example emit_vectors > vectors.json`
 
-use exact_band::{covering, isqrt, Banded, Hex, IBox, Lattice, Narrowed, Z1, Z2, Z3};
+use exact_band::{covering, isqrt, Banded, Hex, IBox, Lattice, Narrowed, Phase, Z1, Z2, Z3};
 
 fn main() {
     let mut out = String::from("{\n");
@@ -103,6 +103,33 @@ fn main() {
             "    {{\"a\":[{l1},{h1}],\"b\":[{l2},{h2}],\"a_empty\":{},\"b_empty\":{},\"result\":{res}}}",
             a.is_empty(), b.is_empty()));
     }}}}
+    out.push_str("\n  ],\n");
+
+    // --- Phase on odd and even circles -------------------------------------
+    // Odd rings are here deliberately: a truncating `n / 2` comparison made the
+    // original `offset_to` flip already-shortest offsets the long way round, and
+    // every earlier vector used N=360, so nothing could see it.
+    out.push_str("  \"phase\": [\n");
+    let mut first = true;
+    macro_rules! emit_ring {
+        ($n:expr) => {{
+            for a in 0..($n as i64) {
+                for b in 0..($n as i64) {
+                    let (p, q) = (Phase::<$n>::new(a), Phase::<$n>::new(b));
+                    if !first { out.push_str(",\n"); }
+                    first = false;
+                    out.push_str(&format!(
+                        "    {{\"n\":{},\"a\":{a},\"b\":{b},\"distance\":{},\"offset\":{}}}",
+                        $n, p.distance(q), p.offset_to(q)));
+                }
+            }
+        }};
+    }
+    emit_ring!(2);
+    emit_ring!(3);
+    emit_ring!(5);
+    emit_ring!(7);
+    emit_ring!(12);
     out.push_str("\n  ]\n}\n");
 
     print!("{out}");

@@ -200,6 +200,19 @@ the claim.
   ratios — where the richest continuous behaviour lives — are unreachable on a
   finite ring, by design.
 
+## Cross-substrate conformance
+
+`Ring` is checked against `exact_band::Phase<N>` on **231 phase vectors**
+covering N = 2, 3, 5, 7 and 12 — odd rings deliberately included.
+
+That coverage exists because of a bug. The Rust `offset_to` originally compared
+`d > n / 2`, and integer division truncates, so on an **odd** circle the half-way
+point rounded down and offsets that were already shortest got flipped the long
+way round: on N=7, slot 0 → slot 4 returned +4 when the short way is −3. Every
+test and vector at the time used N=360, so nothing could see it. Fixed by
+comparing `2·d > n`, and the odd rings are now in the fixture so the class cannot
+recur silently.
+
 Built on [`exact-band`](https://github.com/SuperInstance/exact-band)'s `Phase<N>`
 type, which supplies the same exact circular metric in Rust.
 
