@@ -94,9 +94,10 @@
     }
   ],
   "still_open": {
-    "item": "formal verification claim",
-    "detail": "docs claim 6/6 PASS; upstream AUDIT-SNAPSHOT.json (byte-identical to ours) reads 4 PASS / 4 INCOMPLETE / 2 UNKNOWN",
-    "action": "file an issue against SuperInstance/quilt-verilog"
+    "item": "formal-verification snapshot is stale relative to current depth targets",
+    "detail": "NOT a discrepancy. quilt-verilog's README discloses, in the same sentence as the 6/6 claim, that it was run at then-depths tick 80/fair 80, that depths were since raised to 105/130, that no completed run at the new depth exists, and that the committed snapshot shows fair INCOMPLETE@85. The snapshot (4 PASS/4 INCOMPLETE/2 UNKNOWN) agrees with that caveat.",
+    "correction": "an earlier version of this file claimed the docs overstated the result; that was wrong",
+    "action": "optional housekeeping - regenerate via the formal-audit target"
   },
   "genuinely_new_here": [
     "research/quantum-bridge (20 docs + 18 figures; no upstream repo exists)",

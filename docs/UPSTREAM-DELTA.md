@@ -62,18 +62,18 @@ harvest of `quilt-verilog` is 9% of the real repository, byte-for-byte.
   `whistle.honest.sby`, `snaplog.integrity.sby`, `snaplog.counters.prove.sby`).
   They are proven, just not instantiated in the fabric top. My read was wrong.
 
-## One finding that still stands, and is upstream's problem too
+## A finding I got wrong, corrected
 
-The `6/6 PASS` claim in `docs/FORMAL-PROOFS.md` is **not** supported by the
-committed audit artifact — and the upstream `formal/AUDIT-SNAPSHOT.json` is
-byte-identical to the one here, still reading:
+I previously recorded that upstream's "6/6 PASS" claim was unsupported by its own
+committed audit. **That was wrong.** The `quilt-verilog` README states the caveat
+in the same sentence as the claim — the run's depths, the later raise to 105/130,
+the absence of a completed run at the new depth, the snapshot's
+`fair INCOMPLETE@85`, and the 18-minute stall at step 87.
 
-**4 PASS · 4 INCOMPLETE · 2 UNKNOWN**
-
-`cell_core.fair` sits at INCOMPLETE depth 85; all three
-`fabric.conservation.prove*` variants at INCOMPLETE depth 55; two probes UNKNOWN.
-This is the one substantive thing this archive surfaced that is worth sending
-upstream — as an issue against `quilt-verilog`, not as a new repo.
+The committed snapshot (4 PASS / 4 INCOMPLETE / 2 UNKNOWN) agrees with that
+caveat rather than contradicting it. See `docs/MISSING.md` for the verdict table.
+Nothing to report upstream beyond a suggestion to regenerate the snapshot so the
+artifact and headline line up without reconciliation.
 
 ## Correction to my own reorganisation
 

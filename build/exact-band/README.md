@@ -136,17 +136,25 @@ under `-D warnings` in both feature configurations.
 
 ## A note on `eisenstein` 0.3.1
 
-The optional `eisenstein` feature pins `default-features = false` deliberately:
+The optional `eisenstein` feature pins `default-features = false` because that
+crate's `snap` feature pulls in `libm`/`f64`, and this crate offers no float
+path at all.
 
-- its `snap` feature pulls in `libm`/`f64`;
-- its `std` feature **does not compile** (`E0433`, `hex_room_map.rs:214`);
-- `E12::norm()` computes in `i64`, so at `(i32::MIN, i32::MAX)` it **panics in
-  debug** (`lib.rs:79`) while returning the correct value in release, because the
-  `i64` wrap happens to land on the right `u64` bits.
+One thing worth knowing if you use `E12` directly: `E12::norm()` computes
+`a² − ab + b²` in `i64`. At `(i32::MIN, i32::MAX)` the true norm is
+`13_835_058_048_839_712_769`, past `i64::MAX`, so it **panics in debug**
+(`lib.rs:79`) while returning the correct value in release — the `i64` wrap
+happens to land on the right `u64` bits. Reproduced in both profiles.
 
-That last one is a debug/release divergence in a crate offering "exact arithmetic
-for safety-critical systems." `Hex` widens to `i128` and does not have it. Use
-`Hex` if you care; use `E12` if you need interop.
+`Hex` widens to `i128` and does not have that divergence. Use `Hex` if you care
+about the corners; use `E12` when you need interop.
+
+*(An earlier version of this file also claimed the crate's `std` feature does not
+compile. That is wrong for the published crate — `eisenstein 0.3.1` on crates.io
+contains only `src/lib.rs` and builds cleanly with `std` and with
+`--all-features`. The compile error is in the GitHub repository's HEAD, which
+carries files the published crate does not. Corrected after checking the
+published artifact rather than the repo.)*
 
 ## Status
 

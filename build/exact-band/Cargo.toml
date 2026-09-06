@@ -11,8 +11,8 @@ categories   = ["no-std", "mathematics", "embedded"]
 
 [dependencies]
 # Optional interop with the org's exact hexagonal-lattice crate.
-# NOTE: pinned with default-features = false on purpose — its `snap` feature
-# pulls in libm/f64, and its `std` feature does not compile (E0433).
+# Pinned with default-features = false on purpose: its `snap` feature pulls in
+# libm/f64, and this crate offers no float path at all.
 eisenstein = { version = "0.3.1", default-features = false, optional = true }
 
 [features]

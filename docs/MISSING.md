@@ -43,13 +43,26 @@ in `code/quilt-verilog/docs/`.
 
 **Consequence: nothing in `code/` builds as-is.** This archive is for reading.
 
-## Verification claims vs. committed evidence
+## Verification status — a correction
 
-Worth flagging plainly. The prose docs
-(`code/quilt-verilog/docs/FORMAL-PROOFS.md`, and the repo README) headline
-**"6/6 PASS"**. The only raw, machine-generated verification artifact in the
-archive — `code/quilt-verilog/formal/AUDIT-SNAPSHOT.json`, a deterministic dump of
-solver workdir results — records this instead:
+**An earlier version of this file claimed upstream's docs overstate the formal
+verification. That was wrong, and the correction matters.**
+
+`quilt-verilog`'s README headlines "6/6 PASS" and then discloses the whole
+situation in the same sentence:
+
+> **6/6 PASS** — 5 BMC + 1 k-induction (last full run 2026-08-29, at then-depths
+> tick 80 / fair 80; ⚠ audit r13 2026-09-03: depths since raised to 105/130 and
+> no completed run at the new fair depth is on record — committed snapshot
+> 6e59409 shows fair INCOMPLETE@85, and the r13 re-run exceeded 18 min of solver
+> time at step 87)
+
+The "6/6" is scoped to the depths it was run at, the raise is named, the absence
+of a completed run at the new depth is stated, and the snapshot's
+`INCOMPLETE@85` is quoted by the docs themselves. That is unusually candid, not
+an overstatement.
+
+The committed `formal/AUDIT-SNAPSHOT.json` reads:
 
 | Verdict | Depth | Proof |
 |---|---|---|
@@ -57,18 +70,15 @@ solver workdir results — records this instead:
 | PASS | 24 | `echo_gate.dyadic` |
 | PASS | 54 | `fabric.conservation` |
 | PASS | 39 | `flit_pipe.fly` |
-| **INCOMPLETE** | 85 | `cell_core.fair` |
-| **INCOMPLETE** | 55 | `fabric.conservation.prove` |
-| **INCOMPLETE** | 55 | `fabric.conservation.prove-l12` |
-| **INCOMPLETE** | 55 | `fabric.conservation.prove-t1` |
-| **UNKNOWN** | 8 | `fabric.conservation.probe` |
-| **UNKNOWN** | 6 | `fabric.conservation.probe-t1` |
+| INCOMPLETE | 85 | `cell_core.fair` |
+| INCOMPLETE | 55 | `fabric.conservation.prove` |
+| INCOMPLETE | 55 | `fabric.conservation.prove-l12` |
+| INCOMPLETE | 55 | `fabric.conservation.prove-t1` |
+| UNKNOWN | 8 | `fabric.conservation.probe` |
+| UNKNOWN | 6 | `fabric.conservation.probe-t1` |
 
-That is **4 PASS, 3 INCOMPLETE, 2 UNKNOWN** (plus one more probe). The docs
-describe later, deeper runs reaching PASS ("Depth-130 PASS … 2h29m54s wall"),
-which is plausible and internally consistent — but no artifact committed here
-evidences it. Treat "6/6 PASS" as unverified within this archive.
+4 PASS / 4 INCOMPLETE / 2 UNKNOWN — exactly what the README's caveat describes.
 
-The docs are otherwise notably candid: `FORMAL-PROOFS.md` carries a dated
-*"Correction note (2026-08-30)"* walking back a mislabeled assertion, and
-documents a k-induction failure that PDR later closed.
+The only remaining note is mild housekeeping: the snapshot predates the depth
+raise, so regenerating it via the `formal-audit` target would let artifact and
+headline agree without a reader having to reconcile them.
