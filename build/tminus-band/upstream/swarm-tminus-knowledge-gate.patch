@@ -1,0 +1,69 @@
+Proposed upstream change to swarm-tminus: fire on knowledge as well as on count.
+
+`tminus-band` works today with NO upstream change — the band rides in the
+existing free-form `CountdownEvent.payload` dict. But in that mode upstream's
+own `tick()` still fires on a head-count, which is the thing being fixed.
+
+This patch adds the knowledge gate as an OR alongside quorum, so a converged
+band can fire an event and a wide one cannot be fired by a crowd of ignorant
+confirmations. It is inert when `knowledge_band` is absent, which is every
+existing event and every existing test.
+
+--- a/swarm_tminus/events.py
++++ b/swarm_tminus/events.py
+@@ class CountdownEvent:
+     created_at_unix: float = field(default_factory=lambda: time.time())
+     payload: dict = field(default_factory=dict)
++    knowledge_band: dict | None = None
++    """Optional band gate: {"lo": [...], "hi": [...], "target_width": int,
++    "min_reporters": int, "reporters": [str]}. None means count-only, i.e.
++    exactly today's behaviour."""
++
++    def _has_knowledge_quorum(self) -> bool:
++        """True when the band has converged AND enough distinct reporters
++        narrowed it.
++
++        The reporter floor is necessary but never sufficient, which is what
++        distinguishes it from `quorum_required`: five wide reports never fire,
++        two tight and mutually consistent ones can. It exists because exact
++        intersection makes one false-precision report unusually dangerous -- a
++        subscriber reporting a single point inside the current band collapses
++        the width to zero, and nothing in the geometry can tell an exactly
++        correct claim from a lie that happens to be consistent.
++        """
++        kb = self.knowledge_band
++        if not kb:
++            return False
++        lo, hi = kb["lo"], kb["hi"]
++        if any(l > h for l, h in zip(lo, hi)):
++            return False                     # empty band: contradicted
++        if len(kb.get("reporters", [])) < kb.get("min_reporters", 2):
++            return False
++        return max(h - l for l, h in zip(lo, hi)) <= kb["target_width"]
+
+     def tick(self, now_unix: float) -> EventStatus:
+         if self.status in (EventStatus.FIRED, EventStatus.MISSED, EventStatus.CANCELED):
+             return self.status
+
+-        if self.has_quorum():
++        if self.has_quorum() or self._has_knowledge_quorum():
+             self.status = EventStatus.FIRED
+             return self.status
+
+@@ def to_dict / from_dict
+     "payload": self.payload,
++    "knowledge_band": self.knowledge_band,
+...
+     payload=data.get("payload", {}),
++    knowledge_band=data.get("knowledge_band"),
+
+Notes for the reviewer:
+
+- `from_dict` already uses `.get(key, default)` for every field, so old JSON
+  loads unchanged and produces `knowledge_band=None`.
+- All 301 existing tests exercise paths where `knowledge_band` is absent, so
+  this is additive by construction, not by discipline.
+- Everything in the band is an integer. No float enters the comparison.
+- Deliberately NOT included: trust weighting, Byzantine detection, decay curves,
+  or feeding the existing `confidence: float` into the band. Each of those puts
+  a float back in the one place it was removed from.

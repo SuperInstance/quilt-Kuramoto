@@ -1,0 +1,106 @@
+{
+  "generated": "2026-09-05",
+  "method": "shallow clone of each live repo, file-by-file diff",
+  "headline": "no file in this archive is unique; all are byte-identical to live upstream repos",
+  "units": [
+    {
+      "unit": "quilt-verilog",
+      "upstream": "SuperInstance/quilt-verilog",
+      "files_here": 96,
+      "files_upstream": 1018,
+      "identical": 96,
+      "differ": 0,
+      "unique_here": 0
+    },
+    {
+      "unit": "quilt-substrate-meta",
+      "upstream": "SuperInstance/quilt-substrate-meta",
+      "files_here": 13,
+      "files_upstream": 53,
+      "identical": 13,
+      "differ": 0,
+      "unique_here": 0
+    },
+    {
+      "unit": "quilt-foundation",
+      "upstream": "SuperInstance/quilt-foundation",
+      "files_here": 13,
+      "files_upstream": 18,
+      "identical": 13,
+      "differ": 0,
+      "unique_here": 0
+    },
+    {
+      "unit": "quilt-wiki-2126",
+      "upstream": "SuperInstance/quilt-wiki-2126",
+      "files_here": 24,
+      "files_upstream": 81,
+      "identical": 24,
+      "differ": 0,
+      "unique_here": 0
+    },
+    {
+      "unit": "quilt-cuda",
+      "upstream": "SuperInstance/quilt-cuda",
+      "files_here": 8,
+      "files_upstream": 14,
+      "identical": 8,
+      "differ": 0,
+      "unique_here": 0
+    },
+    {
+      "unit": "nmea-quilt-cell",
+      "upstream": "SuperInstance/nmea-quilt-cell",
+      "files_here": 7,
+      "files_upstream": 10,
+      "identical": 7,
+      "differ": 0,
+      "unique_here": 0
+    },
+    {
+      "unit": "quilt-vm-c",
+      "upstream": "SuperInstance/quilt-vm-c",
+      "files_here": 3,
+      "files_upstream": 8,
+      "identical": 1,
+      "differ": 2,
+      "unique_here": 0,
+      "note": "the 2 differ only by a 3-line vendoring header; code below is byte-identical"
+    },
+    {
+      "unit": "quilt-id",
+      "upstream": "SuperInstance/quilt-id",
+      "files_here": 1,
+      "files_upstream": 2,
+      "identical": 1,
+      "differ": 0,
+      "unique_here": 0
+    }
+  ],
+  "verdict": {
+    "obsolete": false,
+    "variant": false,
+    "subset": true,
+    "recommendation": "do not create repos from this content; it would produce 9%-complete byte-identical copies of live repos"
+  },
+  "resolved_from_MISSING_md": [
+    {
+      "item": "quilt_graph.cu",
+      "status": "exists upstream at quilt-cuda/src/quilt_graph.cu; never harvested"
+    },
+    {
+      "item": "q_whistle.v / q_snaplog.v",
+      "status": "formally proven upstream; my 'unwired sketch' read was wrong"
+    }
+  ],
+  "still_open": {
+    "item": "formal-verification snapshot is stale relative to current depth targets",
+    "detail": "NOT a discrepancy. quilt-verilog's README discloses, in the same sentence as the 6/6 claim, that it was run at then-depths tick 80/fair 80, that depths were since raised to 105/130, that no completed run at the new depth exists, and that the committed snapshot shows fair INCOMPLETE@85. The snapshot (4 PASS/4 INCOMPLETE/2 UNKNOWN) agrees with that caveat.",
+    "correction": "an earlier version of this file claimed the docs overstated the result; that was wrong",
+    "action": "optional housekeeping - regenerate via the formal-audit target"
+  },
+  "genuinely_new_here": [
+    "research/quantum-bridge (20 docs + 18 figures; no upstream repo exists)",
+    "docs/ reconstruction (provenance, inventory, removals, this delta)"
+  ]
+}

@@ -1,0 +1,41 @@
+# depth-fathoms.cell.yaml -- a spec the gate MUST REJECT.
+#
+# Direction matters, and this is the whole lesson.
+#
+# A fathom is exactly 1.8288 m, so fathoms -> metres is a MULTIPLICATION by a
+# whole number of micrometres (1 fathom = 1 828 800 um) and is exact. The
+# ecosystem already relies on that: quilt-esp32's firmware/src/nmea/nmea.c
+# converts with `depth_um = u * 18288 / 10000` and comments "6 ft = 1.8288 m
+# exact". That direction is fine.
+#
+# This spec goes the OTHER way -- decimetres to fathoms -- which divides:
+#   fathoms = dm * 10000 / 18288 = dm * 625 / 1143
+# 1143 = 3^2 * 127 and 625 = 5^4, so the fraction never reduces. A span of
+# 200 fathoms would need 200 * 1143 / 625 decimetres, which is not whole. The
+# conversion is not exactly representable at this span, and the generator says
+# so instead of quietly rounding every reading.
+#
+# The fix is the basis trick: report in decimetres or micrometres, or pick a
+# span that lands on the lattice. That is the engineer's decision, not the
+# compiler's -- but the compiler must not make it silently.
+
+name: depth-fathoms
+description: >
+  Depth below transducer in fathoms, from a decimetre sounder. Included as a
+  worked example of a conversion that is NOT exactly representable.
+
+raw:
+  quantity: decimetres, integer
+  prefilter:
+    kind: moving_median
+    window: 3
+
+rendering:
+  equation: "fathoms = (dm - 0) * 625 / 1143"
+  basis: 1/1 fathoms
+  range: [0, 200]
+  quantize: whole_unit
+  deadband: {unit: fathoms, whole: 1}
+
+tick:
+  period_ms: 1000

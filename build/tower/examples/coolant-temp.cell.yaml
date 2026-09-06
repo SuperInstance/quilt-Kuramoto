@@ -1,0 +1,36 @@
+# coolant-temp.cell.yaml -- a NEGATIVE, non-zero-based range.
+#
+# The upstream generator rejected this outright: "pilot family clamps to a
+# 0-based psi range". Engine coolant runs from -40 degC, so that restriction
+# had to go. The exactness discipline did not.
+#
+# A 10 mV/degC sensor with a 500 mV offset at 0 degC:
+#   degC = (mV - 500) * 1/10
+# A span of 165 degC needs 1650 mV, a whole number of input units, so the
+# basis is exact and the gate passes.
+
+name: coolant-temp
+description: >
+  Engine coolant temperature from a 10 mV/degC transducer offset so that
+  0 degC reads 500 mV. Negative range: the freezing end is real.
+
+io:
+  - name: adc_pin
+    kind: adc
+    unit: V
+
+raw:
+  quantity: transducer millivolts, integer
+  prefilter:
+    kind: moving_median
+    window: 5
+
+rendering:
+  equation: "degC = (mV - 500) * 1 / 10"
+  basis: 1/10 degC
+  range: [-40, 125]
+  quantize: whole_unit
+  deadband: {unit: degC, whole: 2}
+
+tick:
+  period_ms: 500

@@ -1,0 +1,25 @@
+[package]
+name         = "exact-band"
+version      = "0.1.0"
+edition      = "2021"
+rust-version = "1.70"
+license      = "MIT"
+description  = "Exact lattice values carrying an integer tolerance band. No floating point, no square roots."
+repository   = "https://github.com/SuperInstance/exact-band"
+keywords     = ["exact", "interval", "lattice", "no_std", "fixed-point"]
+categories   = ["no-std", "mathematics", "embedded"]
+
+[dependencies]
+# Optional interop with the org's exact hexagonal-lattice crate.
+# Pinned with default-features = false on purpose: its `snap` feature pulls in
+# libm/f64, and this crate offers no float path at all.
+eisenstein = { version = "0.3.1", default-features = false, optional = true }
+
+[features]
+default = []
+## Implement `Lattice` for `eisenstein::E12`.
+eisenstein = ["dep:eisenstein"]
+
+[profile.release]
+opt-level = "s"
+lto       = true
