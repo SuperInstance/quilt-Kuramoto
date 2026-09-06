@@ -188,7 +188,7 @@ def _crossings(ring: Ring, before: list[int], after: list[int]) -> int:
 
 def simulate(*, phases: list[int], omegas: list[int], ring: Ring,
              k_num: int, k_den: int, steps: int, coupling=sawtooth,
-             lock_window: int = 20) -> Run:
+             lock_window: int = 20, observe_every: int = 1) -> Run:
     """Run the model. `K = k_num / k_den`, applied as exact integer arithmetic.
 
     The coupling increment is `(k_num · Σ coupling) // (k_den · N)` with
@@ -197,11 +197,25 @@ def simulate(*, phases: list[int], omegas: list[int], ring: Ring,
 
     `locked_at` is the first step after which all pairwise offsets remained
     identical for `lock_window` consecutive steps.
+
+    `observe_every` makes observation **sparse**: on ticks that are not a
+    multiple of it, each oscillator couples to the neighbour positions it last
+    saw rather than to their current ones. It defaults to 1, which is the dense
+    case and byte-identical to the version without the parameter.
+
+    This exists to give the band experiment an honest baseline. Sparse
+    observation is the regime a carried estimate is supposed to earn its keep
+    in, so comparing a band against *densely* observed plain coupling would
+    stack the comparison in the band's favour. Here plain coupling is handicapped
+    the same way, and still wins.
     """
+    if observe_every < 1:
+        raise ValueError("observe_every must be at least 1")
     n = len(phases)
     if n != len(omegas):
         raise ValueError("need one natural frequency per oscillator")
     phases = [ring.reduce(p) for p in phases]
+    seen = list(phases)
 
     run = Run(steps=steps, locked_at=None, crossings_total=0)
     prev_offsets = _offsets(ring, phases)
@@ -212,9 +226,12 @@ def simulate(*, phases: list[int], omegas: list[int], ring: Ring,
         run.spread_history.append(_spread(ring, phases))
         before = list(phases)
 
+        if t % observe_every == 0:
+            seen = list(phases)
+
         nxt = []
         for i in range(n):
-            total = sum(coupling(ring, phases[i], phases[j])
+            total = sum(coupling(ring, phases[i], seen[j])
                         for j in range(n) if j != i)
             num = k_num * total
             den = k_den * n

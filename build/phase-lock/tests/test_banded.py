@@ -115,3 +115,74 @@ def test_centre_pull_is_symmetric_about_zero():
         moved_down = ring.offset(180, down.centre)
         assert moved_up == -moved_down, (
             f"asymmetric pull at offset {mag}: +{moved_up} vs {moved_down}")
+
+
+def test_plain_coupling_beats_banded_even_when_both_are_starved():
+    """The sparse-observation rescue, made a FAIR comparison.
+
+    The original version of this experiment compared banded coupling under
+    sparse observation against plain coupling under *dense* observation. That
+    handicaps only one side, and it is the wrong way round: sparsity is exactly
+    the regime a carried estimate is supposed to win in, so the band was being
+    given its best case against the baseline's best case.
+
+    `simulate` now takes the same `observe_every`, so both sides can be starved
+    identically. The band still loses -- and loses by more as observation gets
+    sparser, which is the opposite of the hypothesis. Plain coupling degrades
+    gracefully because a stale position is still a position; the band degrades
+    catastrophically because a stale belief held with undiminished confidence is
+    worse than no belief at all.
+    """
+    prev_ratio = None
+    for every in (1, 2, 5, 10):
+        plain = _rate(simulate, k_num=2, k_den=8, coupling=sawtooth,
+                      observe_every=every)
+        banded = _rate(simulate_banded, k_num=2, k_den=8, observe_every=every,
+                       seed=0)
+        assert banded < plain, (
+            f"at observe_every={every}, banded {banded:.0%} should still lose "
+            f"to equally-starved plain {plain:.0%}")
+        assert plain > 0.5, (
+            f"plain should degrade gracefully, not collapse; got {plain:.0%} "
+            f"at observe_every={every}")
+        ratio = banded / plain
+        if prev_ratio is not None:
+            assert ratio <= prev_ratio + 0.02, (
+                "the gap should widen with sparsity, not narrow: "
+                f"ratio went {prev_ratio:.3f} -> {ratio:.3f} at every={every}")
+        prev_ratio = ratio
+
+
+def test_committed_band_study_matches_the_readme_claims():
+    """The README's band numbers must come from a committed, regenerable file.
+
+    Earlier the table was produced by an ad-hoc run whose script was never
+    committed, so nothing could check it and the ecosystem notes drifted to a
+    different set of figures. `run_band_study.py` now writes
+    `results/band_study.json`; this test asserts the qualitative shape of what
+    is in it, so the file cannot go stale without a failure.
+    """
+    import json
+
+    path = pathlib.Path(__file__).resolve().parents[1] / "results" / "band_study.json"
+    assert path.exists(), "run `python3 run_band_study.py` to regenerate"
+    d = json.loads(path.read_text())
+
+    for k, cell in d["headline"].items():
+        assert cell["plain"] > 0.8, f"plain should lock well at K={k}"
+        assert cell["banded"] < cell["plain"] / 2, f"banded should lose badly at K={k}"
+
+    # No coupling strength rescues it -- that is what sweeping to 32x showed.
+    assert d["k_sweep_best"]["banded"] < d["k_sweep_best"]["plain"] / 3
+
+    # Starting more confident makes it worse, monotonically at the tight end.
+    conf = d["start_confidence"]
+    assert conf["5"] <= conf["15"] <= conf["90"] + 0.05
+
+    # Both starved: plain degrades gracefully, banded collapses.
+    sparse = d["sparse_observation"]
+    assert sparse["10"]["plain"] > 0.5
+    assert sparse["10"]["banded"] < 0.05
+
+    # Decay does not rescue it.
+    assert d["stale_widen"]["4"] <= d["stale_widen"]["0"] + 0.02

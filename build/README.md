@@ -3,13 +3,20 @@
 Code written here that does **not** belong in this archive long-term. Each
 directory is a complete standalone project waiting for its own repository.
 
+Run `./check-substrates.sh` to hold all five projects to the same arithmetic in
+one command. It also checks something nothing checked before: that the committed
+`vectors.json` is still what `emit_vectors` produces. A golden file that has
+drifted from its generator makes every substrate agree on a stale answer, and
+that failure is invisible from inside any one of them.
+
 ## `exact-band/`
 
 **Ready to extract.** A `no_std` Rust crate: exact lattice values carrying an
 integer tolerance band, where confirmation narrows the band instead of returning
 pass/fail. No floating point, no square roots.
 
-- 38 tests, clippy-clean under `-D warnings` in both feature configurations
+- 48 tests (52 with `--all-features`), clippy-clean under `-D warnings` in both
+  feature configurations
 - Builds for `thumbv7em-none-eabihf` (bare-metal Cortex-M4F)
 - Mutation-tested: five deliberate bugs introduced, all five caught
 - Zero dependencies (optional `eisenstein` interop behind a feature flag)
@@ -34,6 +41,33 @@ git push -u origin main
 
 Nothing else needs changing — `Cargo.toml` already points `repository` at that URL.
 
+## `exact-band-c/`
+
+**Ready to extract.** The C99 port of `exact-band`, and the third substrate.
+One `.c` file, one header, **1,553 bytes of text at `-Os`** with zero `data` and
+zero `bss`. No allocation, no dependency beyond `<stdint.h>`, no floating-point
+type — and `make nofloat` checks that last claim rather than asserting it.
+
+- Reads the *same* `vectors.json` the Rust and Python substrates read, parsing it
+  rather than transcribing it. 471 vectors, 1,676 checks.
+- 4,385,501 unit checks against definitions rather than against a sibling — a
+  shared mistake reproduces perfectly across substrates, so agreement alone
+  proves nothing.
+- Every range limit (`EB_COORD_MAX`, `EB_RADIUS_MAX`, `EB_SCALE_MAX`) is the
+  largest value whose square still fits in `uint64_t`, and the tests assert both
+  that it fits and that one more does not. The four vectors beyond that reach are
+  skipped, counted, and the count is asserted.
+- Clean under gcc and clang, `-std=c99/c11/c17`, `-Werror -pedantic
+  -Wconversion -Wsign-conversion`, and `-fsanitize=undefined,address`. A genuine
+  32-bit build is **not** verified here — `-m32` needs multilib this container
+  lacks.
+
+Writing its negative control disproved the stated reason for its own fix: the
+`Phase::offset_to` correction was the normalisation into `[0, N)`, not the
+`2·d > n` comparison the commit message credited. Details in its README.
+
+Same extraction procedure, with `SuperInstance/exact-band-c` as the remote.
+
 ## `tminus-band/`
 
 **Ready to extract.** The Python half: exact tolerance bands wired into
@@ -42,7 +76,7 @@ known* rather than on a head-count.
 
 - 23 tests, none skipped, including 5 live integration tests against the real
   installed `swarm-tminus` (0.2.2)
-- **240 golden vectors** shared with `exact-band` — the Python port is held to
+- **471 golden vectors** shared with `exact-band` — the Python port is held to
   the Rust crate byte-for-byte, and the vectors file is verified in sync with
   its generator
 - Stdlib only, no dependencies; no float ever reaches the serialised state
@@ -90,7 +124,8 @@ comparison against a chosen epsilon.
   synchronised, since the splay state is locked at maximum spread.
 - Measured a sharp **upper critical coupling** near K=1.25, a discrete-map
   phenomenon with no continuous-Kuramoto counterpart.
-- 12 tests, plus `run_study.py` which regenerates every number in the README.
+- 24 tests, plus `run_study.py` and `run_band_study.py`, which together
+  regenerate every number in the README.
 
 Built on `exact-band`'s `Phase<N>`. Same extraction procedure, with
 `SuperInstance/phase-lock` as the remote.

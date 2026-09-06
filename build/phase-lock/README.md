@@ -119,7 +119,7 @@ flattens out:
 
 ```bash
 python run_study.py        # writes results/study.json
-python -m pytest tests/ -q # 12 tests
+python -m pytest tests/ -q # 24 tests
 ```
 
 Every number above comes from `run_study.py` and is checked against
@@ -138,21 +138,58 @@ confidence*. Wide band, small step; narrow band, commit.
 
 | K | plain | banded |
 |---|---|---|
-| 0.12 | **93.3%** | 26.7% |
-| 0.50 | **90.8%** | 13.3% |
-| 1.00 | **89.2%** | 10.8% |
+| 0.125 | **91.7%** | 22.5% |
+| 0.500 | **90.0%** | 11.7% |
+| 1.000 | **85.8%** | 7.5% |
 
 Four attempts to rescue it, all refuted:
 
-1. **Under-coupling?** Swept K up to 32×. Banded's best is 27.5%; plain's is 93.3%.
-2. **Warm-up artifact?** Starting *more confident* makes it **worse** — 10.8% at
+1. **Under-coupling?** Swept K from 0.125 to 32. Banded's best across the whole
+   sweep is 22.5%; plain's is 91.7%. Banded is at its best at the
+   *weakest* coupling tested — more gain never helps it.
+2. **Warm-up artifact?** Starting *more confident* makes it **worse**: 7.5% at
    `max_half=90` down to **0.0%** at `max_half=5`. A narrow band that is wrong
    resists correction, so oscillators commit hard to bad beliefs.
 3. **Wrong regime?** A carried estimate should earn its keep when observation is
-   expensive. Under sparse observation it collapses to **0.0%**, while plain
-   coupling using stale positions degrades gracefully (87.5% → 66.7%).
+   expensive — so starve both sides equally and see:
+
+| observation | plain | banded |
+|---|---|---|
+| every 1 tick | **91.7%** | 22.5% |
+| every 2 ticks | **90.8%** | 5.0% |
+| every 5 ticks | **83.3%** | 1.7% |
+| every 10 ticks | **76.7%** | 0.0% |
+
+   Plain degrades gracefully; banded collapses. A stale *position* is still a
+   position. A stale *belief*, held with undiminished confidence, is worse than
+   no belief at all.
 4. **Missing decay?** Widening the band on unobserved ticks — the exact fix
-   `tminus-band` uses for the over-confidence trap — does not help either.
+   `tminus-band` uses for the over-confidence trap — does not help either:
+   1.7% without decay, 0.0% with it, and no better at any rate tested.
+
+Every figure above comes from `run_band_study.py` and is committed to
+`results/band_study.json`. 120 random ensembles per cell, 400 steps each, ring
+of 360, seeds fixed. `tests/test_banded.py` asserts the *shape* of each claim
+rather than the digits, so the result is pinned without being brittle.
+
+### Two corrections to how this was previously reported
+
+**The earlier numbers were not reproducible, and are withdrawn.** A previous
+version of this table gave 93.3% / 26.7% at K=0.125 and similar figures
+elsewhere. Those came from an ad-hoc run whose script was never committed, so
+nothing could check them — and the ecosystem build notes drifted to a *third*
+set (29.2%, 1.7%) that matched neither. The table above replaces all of them and
+is regenerable. The conclusion is unchanged in direction and magnitude; only the
+provenance is fixed.
+
+**The sparsity comparison was unfair, and is corrected.** Rescue 3 originally
+compared banded coupling under sparse observation against plain coupling under
+*dense* observation, because `simulate` had no sparsity parameter at all. That
+handicaps the wrong side: sparsity is precisely the regime a carried estimate is
+supposed to win in. `simulate` now takes the same `observe_every` (default 1,
+byte-identical to before — `results/study.json` regenerates unchanged), so both
+sides starve together. Banded still loses, and the *gap widens* as observation
+thins, which is the opposite of the hypothesis.
 
 ### A bug was found in the banded implementation, and the result survived it
 
@@ -163,9 +200,8 @@ many ticks. That is a real bug, and it was in the code that produced the
 negative result.
 
 It is fixed (the sign is now carried out and back, as in the render path), and
-every number above is post-fix. The conclusion did not change: banded went from
-28.3% to 26.7% at K=0.12, and all four rescues still fail. Recorded because a
-negative result found with buggy code is worth nothing until the bug is ruled
+every number above is post-fix. The conclusion did not change. Recorded because
+a negative result found with buggy code is worth nothing until the bug is ruled
 out as its cause.
 
 ### Why, and what it does not mean
@@ -205,13 +241,19 @@ the claim.
 `Ring` is checked against `exact_band::Phase<N>` on **231 phase vectors**
 covering N = 2, 3, 5, 7 and 12 — odd rings deliberately included.
 
-That coverage exists because of a bug. The Rust `offset_to` originally compared
-`d > n / 2`, and integer division truncates, so on an **odd** circle the half-way
-point rounded down and offsets that were already shortest got flipped the long
-way round: on N=7, slot 0 → slot 4 returned +4 when the short way is −3. Every
-test and vector at the time used N=360, so nothing could see it. Fixed by
-comparing `2·d > n`, and the odd rings are now in the fixture so the class cannot
-recur silently.
+That coverage exists because of a bug. The Rust `offset_to` left its difference
+in `(−N, N)` and folded it with two truncating comparisons — and on an **odd**
+circle the second undid the first, so offsets that were already shortest got
+flipped the long way round: on N=7, slot 0 → slot 4 returned +4 when the short
+way is −3. Every test and vector at the time used N=360, so nothing could see it.
+
+The fix is the **normalisation** into `[0, N)`, not the doubled comparison that
+the fixing commit originally credited. Once `d` is normalised, `2·d > n` and
+`d > n/2` are equivalent for every `N`, odd included. That was asserted for
+weeks before the C port's `test_phase_negative_control` actually checked it —
+and disproved it. See `../exact-band-c/README.md`.
+
+The odd rings are now in the fixture so the class cannot recur silently.
 
 Built on [`exact-band`](https://github.com/SuperInstance/exact-band)'s `Phase<N>`
 type, which supplies the same exact circular metric in Rust.

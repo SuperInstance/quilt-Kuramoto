@@ -109,7 +109,7 @@ understates).
 
 ## Testing
 
-38 tests. The ones that matter:
+48 tests, or 52 with `--all-features`. The ones that matter:
 
 - **A negative control.** `max_basis` must be *tight*: `b` meets the tolerance
   and `b+1` does not. Ported from `quilt-verilog/tb/tb_judge_consistency.v`,

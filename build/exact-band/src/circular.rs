@@ -55,6 +55,12 @@ impl<const N: u32> Phase<N> {
     /// Always in `[0, N/2]`. This is the metric a heading deadband actually
     /// wants, and the one a squared difference gets wrong at the wrap point.
     #[inline]
+    // Clippy suggests `a.abs_diff(b)`, which is clearer -- but this is a `const
+    // fn` and `u32::abs_diff` only became usable in const context in Rust 1.87,
+    // well past this crate's declared MSRV of 1.70. The manual form stays until
+    // the MSRV moves. Only one toolchain is installed here, so this is a reason
+    // from the stabilisation record, not from a build that was run against 1.70.
+    #[allow(clippy::manual_abs_diff)]
     pub const fn distance(self, other: Self) -> u32 {
         let a = self.slot;
         let b = other.slot;

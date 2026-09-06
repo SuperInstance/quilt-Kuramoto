@@ -117,7 +117,7 @@ tests.
 
 This is a **port**, not an independent design. It is held to the Rust crate
 [`exact-band`](https://github.com/SuperInstance/exact-band) by
-`tests/vectors.json` — **240 golden vectors** emitted by
+`tests/vectors.json` — **471 golden vectors** emitted by
 `exact-band/examples/emit_vectors.rs`, covering the covering-radius sweep
 (including its negative control), `isqrt` to the `u128` extremes, Eisenstein and
 `Z²` distances at the `i32` corners, ball narrowing, and box intersection.

@@ -342,10 +342,16 @@ coupling. **It does not**, and four rescue attempts all failed:
 
 | Attempt | Result |
 |---|---|
-| Sweep K up to 32× | banded best 29.2% vs plain 93.3% |
-| Start more confident | **worse** — 10.8% → 1.7% as the band narrows |
-| Sparse observation (the regime an estimate should win) | collapses to 0.0%; plain-with-stale-data degrades gracefully to 66.7% |
+| Sweep K up to 32× | banded best 22.5% vs plain 91.7% |
+| Start more confident | **worse** — 7.5% → 0.0% as the band narrows |
+| Sparse observation (the regime an estimate should win) | collapses to 0.0% at 1-in-10 ticks; equally-starved plain degrades gracefully to 76.7% |
 | Add stale-widening decay | no material change |
+
+All figures regenerate from `build/phase-lock/run_band_study.py` into
+`results/band_study.json`. An earlier version of this table carried 29.2% /
+1.7% / 66.7%, from an ad-hoc run whose script was never committed — those are
+withdrawn, and the sparse-observation row is now a fair comparison in which
+*both* sides are starved at the same rate (previously only the band was).
 
 **Why.** A band is a filter; filters add lag; lag destabilises a feedback loop.
 And confidence-scaling makes an oscillator move *least* exactly when it is
