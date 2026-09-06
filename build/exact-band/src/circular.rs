@@ -70,9 +70,24 @@ impl<const N: u32> Phase<N> {
     /// `sin(θ_j − θ_i)` term's *sign and magnitude* without any trigonometry.
     ///
     /// The range is `(−N/2, N/2]` for even `N` and `[−(N−1)/2, (N−1)/2]` for
-    /// odd `N`. The comparison is written `2·d > n` rather than `d > n / 2`
-    /// precisely because `n / 2` truncates: on an odd circle that rounds the
-    /// half-way point down and flips offsets that were already shortest.
+    /// odd `N`.
+    ///
+    /// `d` is **normalised into `[0, N)` first**, and that normalisation is the
+    /// whole correctness argument. An earlier version left `d` in `(−N, N)` and
+    /// folded it with two truncating comparisons — and on an odd circle the
+    /// second undid the first, returning the long way round:
+    ///
+    /// ```text
+    ///     if d >  n / 2 { d -= n }    // N=7, d=4:   4 >  3  ⇒  d = −3
+    ///     if d <= -n / 2 { d += n }   //            −3 ≤ −3  ⇒  d = +4
+    /// ```
+    ///
+    /// Once `d` is in `[0, N)`, a single comparison suffices, and `2·d > n` and
+    /// `d > n / 2` are equivalent for *every* `N` — for odd `N`,
+    /// `d > (N−1)/2` ⟺ `2d ≥ N` ⟺ (`2d` even, `N` odd) `2d > N`. So the doubled
+    /// form below is a clarity choice, not the fix; the C port's
+    /// `test_phase_negative_control` asserts that equivalence over eleven rings
+    /// rather than leaving it as a claim.
     #[inline]
     pub const fn offset_to(self, other: Self) -> i64 {
         let n = N as i64;

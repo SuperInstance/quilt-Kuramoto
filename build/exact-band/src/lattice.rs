@@ -142,7 +142,9 @@ impl Lattice for Hex {
 /// `E12` is the same mathematical object as [`Hex`] — an Eisenstein integer with
 /// norm `a² − ab + b²` — so it plugs straight in. Enabled by the `eisenstein`
 /// feature, which pins `default-features = false` because that crate's `snap`
-/// feature pulls in `libm`/`f64` and its `std` feature does not compile.
+/// feature pulls in `libm`/`f64` — the very thing this crate exists to avoid.
+/// (`std` builds fine; an earlier note here claimed otherwise, from a reading of
+/// the GitHub HEAD rather than the published 0.3.1. Withdrawn.)
 ///
 /// One caveat inherited from upstream: `E12`'s `Add`/`Sub`/`Mul` use plain `i32`
 /// arithmetic with no overflow checks — they panic in debug and wrap in release.
