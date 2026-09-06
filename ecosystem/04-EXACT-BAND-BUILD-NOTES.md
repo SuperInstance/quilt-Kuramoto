@@ -121,3 +121,79 @@ The `swarm-tminus` wiring (proposal P2). Its API is now documented precisely —
 advance/confirm`, `DeadlineTree` with cascade cancellation, and the
 `.swarm/*.json` schema. That is what makes a band drive *when things fire*
 rather than only what they mean.
+
+---
+
+# P2 — `tminus-band`: the band drives when things fire
+
+Built 2026-09-06, at `build/tminus-band/`. This is the join the whole thread was
+pointing at.
+
+## What changed conceptually
+
+`swarm-tminus` fires on `confirmed_count() >= quorum_required`. That is a
+head-count, and it treats three vague confirmations as better than one precise
+one. `BandedCountdown` fires when the accumulated band has narrowed past a
+target width — knowledge, not attendance.
+
+The divergence is a test, not a claim
+(`test_the_divergence_this_exists_to_fix`): three subscribers each report a band
+800 wide, upstream reaches quorum and fires, and the band says `band_too_wide`
+because nobody actually knows when to fire.
+
+## The firing rule, and why it has a count in it after all
+
+Fire iff **width ≤ target** AND **distinct accepted reporters ≥ min_reporters**.
+
+The reporter floor is quorum returning through the back door, deliberately. The
+difference: upstream's quorum is necessary *and sufficient*; this floor is
+necessary and **never sufficient**.
+
+It is not optional politeness. Exact intersection makes one false-precision
+report unusually dangerous — a subscriber reporting `IBox.point(p)` anywhere
+inside the current band collapses the width to zero, and nothing in the geometry
+can distinguish an exactly-correct claim from a lie that happens to be consistent
+with what we already believed. A *contradiction* is caught for free by the
+geometry; an over-confident consistent lie is invisible to it. Hence the floor.
+
+## Contradiction is stronger than deferral
+
+Upstream's `DEFERRED` only grants time, and only when quorum is not already met —
+it can never block a firing that quorum earned. Contradiction does the opposite:
+it vetoes firing even when width and reporter conditions pass. Firing on
+knowledge you hold an exact proof is inconsistent is precisely the bug.
+
+A contradicting observation is deliberately **not** intersected into the band —
+that would empty it and destroy prior knowledge. It is recorded with its axis and
+exact gap, and it blocks firing until the band can accommodate it.
+
+## The over-confidence trap
+
+Intersection only narrows, so a long-running band converges to a point and then
+rejects a later correct observation. `stale_widen_per_tick` is the cure: a fixed
+integer widening on ticks with no accepted report. No decay curve, no half-life,
+no float. Off by default.
+
+## Design convergence
+
+An independent design consult, run in parallel and without sight of the
+implementation, arrived at the same four decisions: conjunction of width and a
+distinct-reporter floor; contradiction as a status strictly stronger than
+`DEFERRED`; integer widening as the least-machinery decay; and `IBox` as the only
+sound backend for the firing path, with the ball form kept out of it entirely
+because ball-narrowing returns an enclosure rather than the true intersection.
+
+It differed on one point — it argued for a new optional field on
+`CountdownEvent` over a wrapper. That is the better long-term shape, so both
+paths ship: the wrapper works today with zero upstream change (the band rides in
+the existing free-form `payload`), and
+`upstream/swarm-tminus-knowledge-gate.patch` proposes the field plus a one-line
+`or self._has_knowledge_quorum()` in `tick()`, inert for all 301 existing tests.
+
+## Cross-substrate conformance
+
+`exact-band/examples/emit_vectors.rs` emits **240 golden vectors**; the Python
+port must reproduce every one. Verified in sync with its generator as of this
+commit. This mirrors the ecosystem's existing byte-exact discipline, where a cell
+state hash agrees across five language ports — and it means a divergence between
+the Rust and Python substrates is visible rather than latent.
