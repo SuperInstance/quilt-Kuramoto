@@ -4,10 +4,19 @@ Code written here that does **not** belong in this archive long-term. Each
 directory is a complete standalone project waiting for its own repository.
 
 Run `./check-substrates.sh` to hold all five projects to the same arithmetic in
-one command. It also checks something nothing checked before: that the committed
-`vectors.json` is still what `emit_vectors` produces. A golden file that has
-drifted from its generator makes every substrate agree on a stale answer, and
-that failure is invisible from inside any one of them.
+one command. It checks three things beyond the projects' own tests:
+
+- that the committed `vectors.json` is still what `emit_vectors` produces — a
+  golden file that has drifted from its generator makes every substrate agree on
+  a stale answer, and that failure is invisible from inside any one of them;
+- that all three copies of it are byte-identical, so no substrate is quietly
+  conforming to its own private fixture;
+- that the **conformance stream** folds to the same 64-bit checksum in Rust, C
+  and Python. The fixture pins 801 cases someone chose; the stream covers a
+  million nobody did, at a cost of one number rather than one record apiece. See
+  `CONFORMANCE-STREAM.md`, which includes the measurement of what each layer
+  actually catches — the stream is a second net for most bugs, and the only net
+  for defects outside the fixture's chosen input ranges.
 
 ## `exact-band/`
 

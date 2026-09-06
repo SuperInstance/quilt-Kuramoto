@@ -13,8 +13,9 @@ import json
 import pathlib
 
 from tminus_band.band import (
-    Banded, Contradiction, IBox, Tightened,
-    basis_meets, isqrt_ceil, isqrt_floor, max_basis,
+    Banded, Contradiction, HEX_UNITS, IBox, Tightened,
+    basis_meets, dist_sq_hex, dist_sq_z1, dist_sq_z2, dist_sq_z3,
+    isqrt_ceil, isqrt_floor, max_basis,
 )
 
 VECTORS = json.loads((pathlib.Path(__file__).parent / "vectors.json").read_text())
@@ -43,13 +44,25 @@ def test_isqrt_matches_rust_including_u128_extremes():
 
 
 def test_hex_norm_matches_rust_at_i32_extremes():
+    """Against this package's lattice functions, not against a formula re-typed here.
+
+    This test previously recomputed `a**2 - a*b + b**2` in its own body and
+    compared that to the fixture — which checks that the emitter agrees with
+    three lines written directly above the assertion, and says nothing about
+    whether `tminus_band` implements the norm at all. It now calls the library.
+    """
     for v in VECTORS["dist_sq"]:
-        (a, b), (c, d) = v["a"], v["b"]
-        z2 = (a - c) ** 2 + (b - d) ** 2
-        assert z2 == int(v["z2"]), f"Z2 dist_sq {v['a']}->{v['b']}"
-        da, db = a - c, b - d
-        hexd = da * da - da * db + db * db
-        assert hexd == int(v["hex"]), f"Hex dist_sq {v['a']}->{v['b']}"
+        assert dist_sq_z2(v["a"], v["b"]) == int(v["z2"]), f"Z2 {v}"
+        assert dist_sq_hex(v["a"], v["b"]) == int(v["hex"]), f"Hex {v}"
+
+
+def test_hex_units_have_norm_one():
+    """The six units of Z[omega], and the non-unit that was once mistaken for one."""
+    for i, u in enumerate(HEX_UNITS):
+        assert dist_sq_hex(u, (0, 0)) == 1, f"unit {u} should have norm 1"
+        opp = HEX_UNITS[(i + 3) % 6]
+        assert (u[0], u[1]) == (-opp[0], -opp[1]), "units three apart are opposite"
+    assert dist_sq_hex((-1, 1), (0, 0)) == 3, "(-1, 1) is not a unit"
 
 
 def test_banded_narrow_matches_rust():
@@ -97,8 +110,7 @@ def test_dist_sq_z1_matches_rust():
     """
     seen_extreme = False
     for v in VECTORS["dist_sq_z1"]:
-        got = (v["a"] - v["b"]) ** 2
-        assert got == int(v["d2"]), f"z1 {v}"
+        assert dist_sq_z1(v["a"], v["b"]) == int(v["d2"]), f"z1 {v}"
         if int(v["d2"]) == (2 ** 32 - 1) ** 2:
             seen_extreme = True
     assert seen_extreme, "the widest one-dimensional case should be in the fixture"
@@ -112,8 +124,7 @@ def test_dist_sq_z3_matches_rust():
     vectors.
     """
     for v in VECTORS["dist_sq_z3"]:
-        got = sum((a - b) ** 2 for a, b in zip(v["a"], v["b"]))
-        assert got == int(v["d2"]), f"z3 {v}"
+        assert dist_sq_z3(v["a"], v["b"]) == int(v["d2"]), f"z3 {v}"
 
 
 def test_banded_within_matches_rust():

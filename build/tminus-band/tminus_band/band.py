@@ -76,6 +76,56 @@ def max_basis(dim: int, eps: int) -> int:
 # IBox — the band that genuinely narrows
 # --------------------------------------------------------------------------
 
+
+# --- exact integer lattices ------------------------------------------------
+#
+# These are library functions, not formulas re-typed at each call site. That
+# distinction matters more than it looks: the hex conformance test used to
+# recompute `a**2 - a*b + b**2` inside the test body, so it compared the fixture
+# against arithmetic written three lines above the assertion rather than against
+# anything this package implements. A test like that cannot fail for the reason
+# it exists.
+
+
+def dist_sq_z1(a: int, b: int) -> int:
+    """Exact squared distance on the one-dimensional integer lattice."""
+    d = a - b
+    return d * d
+
+
+def dist_sq_z2(a: Sequence[int], b: Sequence[int]) -> int:
+    """Exact squared Euclidean distance on Z^2."""
+    dx, dy = a[0] - b[0], a[1] - b[1]
+    return dx * dx + dy * dy
+
+
+def dist_sq_z3(a: Sequence[int], b: Sequence[int]) -> int:
+    """Exact squared Euclidean distance on Z^3."""
+    dx, dy, dz = a[0] - b[0], a[1] - b[1], a[2] - b[2]
+    return dx * dx + dy * dy + dz * dz
+
+
+def dist_sq_hex(a: Sequence[int], b: Sequence[int]) -> int:
+    """Eisenstein norm distance on the hexagonal lattice: `a^2 - ab + b^2`.
+
+    Points are Eisenstein integers `a + b*omega`, `omega = (-1 + sqrt(-3))/2`.
+    The norm is the exact squared Euclidean length in the plane embedding, so
+    60-degree geometry costs no floating point at all. It is positive definite:
+    zero only at the origin, despite the negative middle term.
+    """
+    da, db = a[0] - b[0], a[1] - b[1]
+    return da * da - da * db + db * db
+
+
+#: The six units of Z[omega]: +-1, +-omega, +-(1 + omega). Each has norm exactly
+#: 1, and `HEX_UNITS[i]` is opposite to `HEX_UNITS[i + 3]`. `(-1, 1)` is *not*
+#: among them -- its norm is 3 -- which an earlier version of the Rust table got
+#: wrong.
+HEX_UNITS: tuple[tuple[int, int], ...] = (
+    (1, 0), (1, 1), (0, 1), (-1, 0), (-1, -1), (0, -1),
+)
+
+
 @dataclass(frozen=True)
 class IBox:
     """An axis-aligned box on Z**n, inclusive on both bounds.

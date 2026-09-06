@@ -1,0 +1,17 @@
+{
+  "_": "Committed answers for the conformance stream. See CONFORMANCE-STREAM.md. Every substrate must reproduce every checksum it is run at. Several counts rather than one, so a divergence that first appears late is localised to a range rather than only to 'somewhere in a million'.",
+  "seed": "0x2545F4914F6CDD1D",
+  "h0": "0xCBF29CE484222325",
+  "checksums": {
+    "1000": "0cd27e0f2a5aab1a",
+    "10000": "a526598c5d0be9ab",
+    "100000": "adde6ec8bfbe98d0",
+    "1000000": "3577392445a5579c"
+  },
+  "routine_counts": {
+    "rust": 1000000,
+    "c": 1000000,
+    "python": 100000,
+    "_note": "Python is capped lower only because it is ~1000x slower per case, not because it is trusted less: it is verified at 1000000 by hand and the result is recorded above. Raise it with STREAM_PY_ITERS."
+  }
+}

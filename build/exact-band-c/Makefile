@@ -16,7 +16,7 @@ OBJ      = build/exact_band.o
 LIB      = build/libexactband.a
 VECTORS ?= tests/vectors.json
 
-.PHONY: all test lib conformance unit clean nofloat
+.PHONY: all test lib conformance unit stream clean nofloat
 
 all: test
 
@@ -37,6 +37,9 @@ build/unit: tests/test_exact_band.c $(SRC) $(HDR) | build
 build/conformance: tests/conformance.c tests/json.c tests/json.h $(SRC) $(HDR) | build
 	$(CC) $(CFLAGS) tests/conformance.c tests/json.c $(SRC) -o $@
 
+build/stream: tests/stream.c $(SRC) $(HDR) | build
+	$(CC) $(CFLAGS) tests/stream.c $(SRC) -o $@
+
 unit: build/unit
 	./build/unit
 
@@ -53,7 +56,16 @@ nofloat: $(OBJ)
 	  echo "nofloat: floating point appears in the sources"; exit 1; \
 	else echo "nofloat: no floating-point type in $(SRC) $(HDR)"; fi
 
-test: unit conformance nofloat
+# The conformance stream: millions of pseudo-random cases folded into one
+# checksum, which the Rust and Python substrates must reproduce exactly. See
+# ../CONFORMANCE-STREAM.md. `make stream` prints it; ../check-substrates.sh is
+# what actually compares the three.
+stream: build/stream
+	./build/stream $(STREAM_ITERS)
+
+STREAM_ITERS ?= 200000
+
+test: unit conformance stream nofloat
 	@echo
 	@echo "exact-band-c: all checks pass."
 

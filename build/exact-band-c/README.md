@@ -102,7 +102,7 @@ The Rust doc comment has been corrected to match.
 
 ## Tests
 
-`make` runs three things, and all three can fail:
+`make` runs four things, and all four can fail:
 
 **`unit` — 4,389,150 checks.** Properties checked against their *definitions*,
 not against a sibling implementation, because a shared mistake reproduces
@@ -130,6 +130,21 @@ two-dimensional box section **fails if no disjoint pair is worst on axis 0 and
 none is worst on axis 1**, because a port returning the *first* disagreeing axis
 rather than the *worst* one would otherwise slip through.
 
+**`stream` — millions of cases nobody chose.** The fixture pins boundaries and
+the exact inputs that once exposed a bug; it cannot cover cases nobody thought
+of. The conformance stream walks a deterministic pseudo-random sequence, applies
+every operation in the library, and folds each answer into one 64-bit checksum
+that Rust and Python must reproduce exactly — so the case count can go to
+millions without a file growing at all. All three agree at 1 000, 10 000,
+100 000 and 1 000 000 iterations. Specification and cost in
+`../CONFORMANCE-STREAM.md`.
+
+It earns its place: a defect planted at `basis == 77777` — outside the fixture's
+ten basis values and outside the unit sweep's range of 300 — leaves both of them
+reporting PASS and moves the checksum immediately. For the bugs the fixture *was*
+designed around, though, the stream is a second net rather than the only one, and
+`../CONFORMANCE-STREAM.md` has the table saying which layer caught what.
+
 **`nofloat` — the central claim, checked.** The library says it contains no
 floating point; the build verifies it, and the check itself has been tested
 against a file with a `double` added, which it rejects.
@@ -154,6 +169,7 @@ src/exact_band.h    the interface, with every range limit derived in a comment
 src/exact_band.c    the implementation -- one file, no branches on word size
 tests/test_exact_band.c   property tests and negative controls
 tests/conformance.c       runs the shared vectors
+tests/stream.c            the conformance stream (see ../CONFORMANCE-STREAM.md)
 tests/json.[ch]           a minimal JSON reader, test-only on purpose:
                           the library depends on nothing, and that is worth
                           more than reusing a parser
