@@ -3,6 +3,14 @@
 Code written here that does **not** belong in this archive long-term. Each
 directory is a complete standalone project waiting for its own repository.
 
+**Start with [`divergence/`](divergence/README.md).** Everything else here
+verifies that these libraries are *correct*; that directory is the only thing
+that measures whether they are *worth using* — and two of its three findings cut
+against this repo's own framing. Doubles turn out to be accurate; naive integers
+turn out to be worse than doubles. What the band actually buys is narrower and
+more defensible than "exact arithmetic is better", and it is measured rather than
+asserted.
+
 Run `./check-substrates.sh` to hold all five projects to the same arithmetic in
 one command. It checks three things beyond the projects' own tests:
 

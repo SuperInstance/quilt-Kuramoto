@@ -50,6 +50,12 @@ say "Python: tower"
 say "Python: phase-lock"
 ( cd phase-lock && python3 -m pytest -q )
 
+say "divergence study: is any of this worth using?"
+# Correctness is verified everywhere else in this directory. This is the only
+# thing that measures whether it BUYS anything -- and it asserts a negative
+# control on itself, so a study with no contrast fails rather than reassures.
+( cd divergence && make --no-print-directory check )
+
 say "conformance stream: do all three substrates fold to the same checksum?"
 # The golden file pins cases someone chose. The stream covers the ones nobody
 # did: each substrate walks the same pseudo-random sequence and folds every
