@@ -418,6 +418,147 @@ static void test_phase_degenerate(void)
     CHECK(eb_phase_new(12u, -13) == 11u);
 }
 
+/* ---- per-lattice limits ------------------------------------------------- */
+
+static void test_per_dimension_limits_are_each_tight(void)
+{
+    /* Three limits, because the number of squared terms summed is 1, 2 and 3.
+     * Each is claimed to be the largest that fits, and "largest" is falsifiable:
+     * check that C fits and C+1 does not, per dimension. Division is used for
+     * the negative half, since the whole point is that multiplying would
+     * overflow. */
+    struct { uint64_t terms; uint64_t c; } cases[3];
+    size_t i;
+    cases[0].terms = 1u; cases[0].c = (uint64_t)EB_COORD_MAX_Z1;
+    cases[1].terms = 2u; cases[1].c = (uint64_t)EB_COORD_MAX_Z2;
+    cases[2].terms = 3u; cases[2].c = (uint64_t)EB_COORD_MAX_Z3;
+
+    for (i = 0; i < 3u; i++) {
+        uint64_t span = 2u * cases[i].c;
+        uint64_t terms = cases[i].terms;
+        CHECK(span <= UINT64_MAX / span);                  /* span^2 fits */
+        CHECK(span * span <= UINT64_MAX / terms);          /* and so does k*span^2 */
+        if (cases[i].c < (uint64_t)INT32_MAX) {
+            uint64_t span1 = 2u * (cases[i].c + 1u);
+            CHECK(span1 * span1 > UINT64_MAX / terms);     /* one more does not */
+        }
+    }
+    /* Z^1 is unrestricted -- every int32 is in reach, including both extremes,
+     * because a single squared int32 difference is at most (2^32-1)^2. */
+    CHECK(eb_coord_ok_dim(INT32_MAX, 1u));
+    CHECK(eb_coord_ok_dim(INT32_MIN, 1u));
+    CHECK(eb_dist_sq_z1(INT32_MAX, INT32_MIN) == 4294967295u * (uint64_t)4294967295u);
+    /* Z^2 and Z^3 are not, and the tighter limit really is tighter. */
+    CHECK(!eb_coord_ok_dim(INT32_MAX, 2u));
+    CHECK(!eb_coord_ok_dim(INT32_MAX, 3u));
+    CHECK(eb_coord_ok_dim(EB_COORD_MAX_Z2, 2u));
+    CHECK(!eb_coord_ok_dim(EB_COORD_MAX_Z2, 3u));
+    CHECK(eb_coord_ok_dim(EB_COORD_MAX_Z3, 3u));
+    CHECK(!eb_coord_ok_dim(0, 0u));   /* an unknown dimension is refused */
+    CHECK(!eb_coord_ok_dim(0, 4u));
+
+    /* The Z^3 worst case is computed, not merely permitted. */
+    {
+        int32_t a[3], b[3];
+        uint64_t c = (uint64_t)EB_COORD_MAX_Z3, span;
+        a[0] = EB_COORD_MAX_Z3; a[1] = EB_COORD_MAX_Z3; a[2] = EB_COORD_MAX_Z3;
+        b[0] = -EB_COORD_MAX_Z3; b[1] = -EB_COORD_MAX_Z3; b[2] = -EB_COORD_MAX_Z3;
+        span = 2u * c;
+        CHECK(eb_dist_sq_z3(a, b) == 3u * span * span);
+    }
+}
+
+/* ---- from_basis --------------------------------------------------------- */
+
+static void test_from_basis_rounds_up_and_is_minimal(void)
+{
+    uint32_t basis, dim;
+    for (dim = 1u; dim <= 3u; dim++) {
+        for (basis = 0u; basis <= 300u; basis++) {
+            uint64_t target = (uint64_t)dim * basis * basis;
+            uint64_t r = eb_banded_from_basis(0, basis, dim).radius;
+            /* Sound: the band covers the deep hole. */
+            CHECK(4u * r * r >= target);
+            /* Tight: one smaller does not. Rounding down here would understate
+             * every band the function produces, which is the failure mode this
+             * check exists for. */
+            if (r > 0u) { CHECK(4u * (r - 1u) * (r - 1u) < target); }
+            /* Consistent with the covering predicate: r is a tolerance the
+             * basis meets, and r-1 is one it does not. */
+            if (r <= EB_SCALE_MAX) {
+                CHECK(eb_basis_meets(dim, basis, (uint32_t)r));
+                if (r > 0u) { CHECK(!eb_basis_meets(dim, basis, (uint32_t)(r - 1u))); }
+            }
+        }
+    }
+    /* A zero basis is a lattice of exact points -- no uncertainty at all. */
+    CHECK(eb_banded_from_basis(7, 0u, 3u).radius == 0u);
+    CHECK(eb_banded_from_basis(7, 0u, 3u).value == 7);
+    /* An unknown dimension is refused rather than guessed at. */
+    CHECK(eb_banded_from_basis(0, 10u, 0u).radius == 0u);
+    CHECK(eb_banded_from_basis(0, 10u, 4u).radius == 0u);
+}
+
+/* ---- n-dimensional boxes ------------------------------------------------ */
+
+static void test_ibox_n_narrow_and_worst_axis(void)
+{
+    /* Two axes, so `disagreement` has a choice. The scalar case cannot test
+     * this at all: with one axis, "worst" and "first" are the same answer. */
+    eb_ibox_t a[2], b[2], out[2];
+    uint32_t axis = 99u;
+    uint64_t gap = 0u;
+
+    /* Disjoint on axis 1 only. */
+    a[0].lo = 0;  a[0].hi = 10; a[1].lo = 0;  a[1].hi = 10;
+    b[0].lo = 5;  b[0].hi = 15; b[1].lo = 40; b[1].hi = 50;
+    CHECK(eb_ibox_narrow_n(a, b, 2u, out) == 0);
+    CHECK(eb_ibox_disagreement_n(a, b, 2u, &axis, &gap) == 1);
+    CHECK(axis == 1u);
+    CHECK(gap == 30u);
+
+    /* Disjoint on both, worse on axis 0 -- so the worst-axis rule must pick 0
+     * even though axis 1 disagrees too. A port returning the first disagreeing
+     * axis passes this one by luck, which is why the mirror case follows. */
+    a[0].lo = 0;   a[0].hi = 1;  a[1].lo = 0;  a[1].hi = 1;
+    b[0].lo = 100; b[0].hi = 101; b[1].lo = 5; b[1].hi = 6;
+    CHECK(eb_ibox_disagreement_n(a, b, 2u, &axis, &gap) == 1);
+    CHECK(axis == 0u);
+    CHECK(gap == 99u);
+
+    /* Mirror: worse on axis 1. A first-disagreeing-axis port fails here. */
+    a[0].lo = 0;  a[0].hi = 1;   a[1].lo = 0;   a[1].hi = 1;
+    b[0].lo = 5;  b[0].hi = 6;   b[1].lo = 100; b[1].hi = 101;
+    CHECK(eb_ibox_disagreement_n(a, b, 2u, &axis, &gap) == 1);
+    CHECK(axis == 1u);
+    CHECK(gap == 99u);
+
+    /* Equal gaps: the first axis wins the tie, matching the Rust original. */
+    a[0].lo = 0;  a[0].hi = 1;   a[1].lo = 0;  a[1].hi = 1;
+    b[0].lo = 10; b[0].hi = 11;  b[1].lo = 10; b[1].hi = 11;
+    CHECK(eb_ibox_disagreement_n(a, b, 2u, &axis, &gap) == 1);
+    CHECK(axis == 0u);
+
+    /* Overlapping: no disagreement, and the intersection is exact per axis. */
+    a[0].lo = 0; a[0].hi = 10; a[1].lo = -5; a[1].hi = 5;
+    b[0].lo = 3; b[0].hi = 20; b[1].lo = 0;  b[1].hi = 2;
+    CHECK(eb_ibox_narrow_n(a, b, 2u, out) == 1);
+    CHECK(out[0].lo == 3 && out[0].hi == 10);
+    CHECK(out[1].lo == 0 && out[1].hi == 2);
+    CHECK(eb_ibox_disagreement_n(a, b, 2u, &axis, &gap) == 0);
+
+    /* Aliasing the output onto an input must not corrupt a rejected narrow:
+     * the disjointness test completes before anything is written. */
+    a[0].lo = 0;  a[0].hi = 10; a[1].lo = 0;  a[1].hi = 10;
+    b[0].lo = 3;  b[0].hi = 6;  b[1].lo = 40; b[1].hi = 50;
+    CHECK(eb_ibox_narrow_n(a, b, 2u, a) == 0);
+    CHECK(a[0].lo == 0 && a[0].hi == 10);   /* untouched, not half-updated */
+
+    /* Zero axes: nothing can disagree, so the empty intersection succeeds. */
+    CHECK(eb_ibox_narrow_n(a, b, 0u, 0) == 1);
+    CHECK(eb_ibox_disagreement_n(a, b, 0u, 0, 0) == 0);
+}
+
 /* ---- driver ------------------------------------------------------------- */
 
 int main(void)
@@ -425,6 +566,9 @@ int main(void)
     test_isqrt_definition();
     test_isqrt_boundaries();
     test_coord_max_is_exact();
+    test_per_dimension_limits_are_each_tight();
+    test_from_basis_rounds_up_and_is_minimal();
+    test_ibox_n_narrow_and_worst_axis();
     test_hex_units_have_norm_one();
     test_hex_norm_is_positive_definite();
     test_max_basis_is_tight();

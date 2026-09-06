@@ -44,18 +44,19 @@ Nothing else needs changing — `Cargo.toml` already points `repository` at that
 ## `exact-band-c/`
 
 **Ready to extract.** The C99 port of `exact-band`, and the third substrate.
-One `.c` file, one header, **1,553 bytes of text at `-Os`** with zero `data` and
+One `.c` file, one header, **2,086 bytes of text at `-Os`** with zero `data` and
 zero `bss`. No allocation, no dependency beyond `<stdint.h>`, no floating-point
 type — and `make nofloat` checks that last claim rather than asserting it.
 
 - Reads the *same* `vectors.json` the Rust and Python substrates read, parsing it
-  rather than transcribing it. 471 vectors, 1,676 checks.
-- 4,385,501 unit checks against definitions rather than against a sibling — a
+  rather than transcribing it. 801 vectors, 2,668 checks.
+- 4,389,150 unit checks against definitions rather than against a sibling — a
   shared mistake reproduces perfectly across substrates, so agreement alone
   proves nothing.
-- Every range limit (`EB_COORD_MAX`, `EB_RADIUS_MAX`, `EB_SCALE_MAX`) is the
-  largest value whose square still fits in `uint64_t`, and the tests assert both
-  that it fits and that one more does not. The four vectors beyond that reach are
+- Every range limit is the largest value whose square still fits in `uint64_t`,
+  and the tests assert both that it fits and that one more does not. The limits
+  are **per lattice**, because Z¹, Z² and Z³ sum one, two and three squared
+  terms: Z¹ needs no restriction at all. The thirteen vectors beyond reach are
   skipped, counted, and the count is asserted.
 - Clean under gcc and clang, `-std=c99/c11/c17`, `-Werror -pedantic
   -Wconversion -Wsign-conversion`, and `-fsanitize=undefined,address`. A genuine
@@ -76,7 +77,7 @@ known* rather than on a head-count.
 
 - 23 tests, none skipped, including 5 live integration tests against the real
   installed `swarm-tminus` (0.2.2)
-- **471 golden vectors** shared with `exact-band` — the Python port is held to
+- **801 golden vectors** shared with `exact-band` — the Python port is held to
   the Rust crate byte-for-byte, and the vectors file is verified in sync with
   its generator
 - Stdlib only, no dependencies; no float ever reaches the serialised state

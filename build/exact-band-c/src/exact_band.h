@@ -38,11 +38,25 @@ extern "C" {
 
 /* ---- range limits ------------------------------------------------------- */
 
-/* Largest coordinate magnitude for which no squared distance in this file can
- * overflow uint64_t. The binding case is the hexagonal norm a^2 - ab + b^2 at
- * a = -b, which is 3*(2C)^2 -- larger than the 2*(2C)^2 that Z^2 needs. So
- * C = floor(sqrt(UINT64_MAX / 3) / 2), and C+1 already overflows. */
-#define EB_COORD_MAX ((int32_t)1239850262)
+/* Coordinate limits, PER LATTICE, because they genuinely differ: the number of
+ * squared terms summed is 1, 2 and 3 respectively, and quoting the tightest of
+ * them everywhere would refuse inputs this port handles perfectly well.
+ *
+ * Each is the largest C with (number of terms) * (2C)^2 <= UINT64_MAX, and the
+ * test suite asserts both halves: that C fits and that C+1 does not.
+ *
+ *   Z^1   one term, and (2^32 - 1)^2 < UINT64_MAX, so the WHOLE int32 range is
+ *         safe -- no restriction at all.
+ *   Z^2   two terms:  2*(2C)^2 <= UINT64_MAX
+ *   Z^3   three terms, and the hexagonal norm a^2 - ab + b^2 costs the same
+ *         3*(2C)^2 at its worst point a = -b. */
+#define EB_COORD_MAX_Z1 ((int32_t)2147483647)   /* INT32_MAX: unrestricted */
+#define EB_COORD_MAX_Z2 ((int32_t)1518500249)
+#define EB_COORD_MAX_Z3 ((int32_t)1239850262)
+
+/* The general-purpose name is the tightest of the three, so code that does not
+ * know which lattice it will be used on stays safe by default. */
+#define EB_COORD_MAX EB_COORD_MAX_Z3
 
 /* Two radii are summed before squaring, so the sum must square cleanly:
  * (2R)^2 <= UINT64_MAX. Rounded down to a power of two minus one. */
@@ -74,14 +88,21 @@ uint32_t eb_max_basis(uint32_t dim, uint32_t eps);
 
 /* ---- lattices ----------------------------------------------------------- */
 
-/** Is a coordinate inside EB_COORD_MAX? */
+/** Is a coordinate inside the (conservative) EB_COORD_MAX? */
 int eb_coord_ok(int32_t v);
+/** Is a coordinate inside the limit for a `dim`-dimensional lattice?
+ *  `dim` of 1, 2 or 3; anything else is rejected. */
+int eb_coord_ok_dim(int32_t v, uint32_t dim);
 
-/** Squared Euclidean distance on Z^1. Coordinates must satisfy eb_coord_ok. */
+/** Squared Euclidean distance on Z^1. Safe for the entire int32 range. */
 uint64_t eb_dist_sq_z1(int32_t a, int32_t b);
-/** Squared Euclidean distance on Z^2. Coordinates must satisfy eb_coord_ok. */
+/** Squared Euclidean distance on Z^2. Coordinates within EB_COORD_MAX_Z2. */
 uint64_t eb_dist_sq_z2(int32_t ax, int32_t ay, int32_t bx, int32_t by);
-/** Eisenstein norm distance on the hexagonal lattice: a^2 - ab + b^2. */
+/** Squared Euclidean distance on Z^3. Coordinates within EB_COORD_MAX_Z3. */
+uint64_t eb_dist_sq_z3(const int32_t a[3], const int32_t b[3]);
+/** Eisenstein norm distance on the hexagonal lattice: a^2 - ab + b^2.
+ *  Coordinates within EB_COORD_MAX_Z3 -- the worst point a = -b costs the same
+ *  three squared terms as three dimensions do. */
 uint64_t eb_dist_sq_hex(int32_t aa, int32_t ab, int32_t ba, int32_t bb);
 
 /* ---- Banded: a centre with a linear integer radius ---------------------- */
@@ -102,6 +123,15 @@ int eb_banded_overlaps(eb_banded_t a, eb_banded_t b);
 int eb_banded_within(eb_banded_t a, eb_banded_t b);
 /** Widen by `extra`, saturating at EB_RADIUS_MAX rather than wrapping. */
 eb_banded_t eb_banded_widen(eb_banded_t b, uint32_t extra);
+
+/** The band a lattice of basis `b` induces in `dim` dimensions.
+ *
+ *  The covering radius `b*sqrt(dim)/2` is irrational in general, so this returns
+ *  the smallest INTEGER radius that still covers it: the smallest r with
+ *  `4*r^2 >= dim*b^2`, found by bisection, never by a root. Rounding UP is the
+ *  whole point -- a band that rounded down would understate the uncertainty it
+ *  exists to carry. Returns radius 0 for dim outside 1..3. */
+eb_banded_t eb_banded_from_basis(int32_t value, uint32_t basis, uint32_t dim);
 
 typedef enum { EB_TIGHTENED = 0, EB_CONTRADICTION = 1 } eb_narrow_kind_t;
 
@@ -135,6 +165,21 @@ int eb_ibox_narrow(eb_ibox_t a, eb_ibox_t b, eb_ibox_t *out);
 /** Gap when disjoint; 0 when they intersect. Computed in unsigned arithmetic,
  *  which is exact here: for int64 bounds the true gap always fits in uint64. */
 uint64_t eb_ibox_disagreement(eb_ibox_t a, eb_ibox_t b);
+
+/** Exact intersection of two `n`-axis boxes, one `eb_ibox_t` per axis.
+ *  Writes `n` intervals to `out` and returns 1, or returns 0 if any axis is
+ *  disjoint. `out` may be NULL, or may alias `a` or `b`. */
+int eb_ibox_narrow_n(const eb_ibox_t *a, const eb_ibox_t *b, uint32_t n,
+                     eb_ibox_t *out);
+
+/** Which axis disagrees WORST, and by how much.
+ *
+ *  Returns 1 and writes `*axis` and `*gap` when the boxes are disjoint, 0 when
+ *  they intersect. "Worst", not "first": with one axis there is no choice to
+ *  make, which is why every one-dimensional vector passes a port that returns
+ *  the first disagreeing axis instead. */
+int eb_ibox_disagreement_n(const eb_ibox_t *a, const eb_ibox_t *b, uint32_t n,
+                           uint32_t *axis, uint64_t *gap);
 
 /* ---- Phase: exact position on a discrete circle -------------------------- */
 

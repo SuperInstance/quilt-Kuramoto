@@ -250,6 +250,169 @@ static void run_ibox(const js_doc_t *d, int arr)
     }
 }
 
+static void run_dist_sq_z1(const js_doc_t *d, int arr)
+{
+    int i, n = js_len(d, arr);
+    for (i = 0; i < n; i++) {
+        int r = js_at(d, arr, i);
+        int64_t a = i64_of(d, need(d, r, "a", "dist_sq_z1", i));
+        int64_t b = i64_of(d, need(d, r, "b", "dist_sq_z1", i));
+        uint64_t want;
+        /* No skip here, deliberately: one squared term of an int32 difference
+         * is at most (2^32-1)^2, which fits uint64_t with room to spare. The
+         * whole int32 range is in reach for Z^1, and quoting the hexagonal
+         * limit here would refuse inputs this port handles exactly. */
+        if (!js_u64(d, need(d, r, "d2", "dist_sq_z1", i), &want)) { skipped++; continue; }
+        expect("dist_sq_z1", i, "d2",
+               (long long)eb_dist_sq_z1((int32_t)a, (int32_t)b), (long long)want);
+        expect("dist_sq_z1", i, "coord_ok_dim1",
+               eb_coord_ok_dim((int32_t)a, 1u), 1);
+    }
+}
+
+static void run_dist_sq_z3(const js_doc_t *d, int arr)
+{
+    int i, k, n = js_len(d, arr);
+    for (i = 0; i < n; i++) {
+        int r  = js_at(d, arr, i);
+        int aj = need(d, r, "a", "dist_sq_z3", i);
+        int bj = need(d, r, "b", "dist_sq_z3", i);
+        int32_t a[3], b[3];
+        uint64_t want;
+        int in_range = 1;
+
+        if (aj < 0 || bj < 0) { continue; }
+        for (k = 0; k < 3; k++) {
+            a[k] = (int32_t)i64_of(d, js_at(d, aj, k));
+            b[k] = (int32_t)i64_of(d, js_at(d, bj, k));
+            if (!eb_coord_ok_dim(a[k], 3u) || !eb_coord_ok_dim(b[k], 3u)) {
+                in_range = 0;
+            }
+        }
+        if (!in_range) { skipped++; continue; }
+        if (!js_u64(d, need(d, r, "d2", "dist_sq_z3", i), &want)) { skipped++; continue; }
+        expect("dist_sq_z3", i, "d2", (long long)eb_dist_sq_z3(a, b), (long long)want);
+    }
+}
+
+static void run_banded_within(const js_doc_t *d, int arr)
+{
+    int i, n = js_len(d, arr);
+    for (i = 0; i < n; i++) {
+        int r  = js_at(d, arr, i);
+        int aj = need(d, r, "a", "banded_within", i);
+        int bj = need(d, r, "b", "banded_within", i);
+        eb_banded_t a, b;
+
+        if (aj < 0 || bj < 0) { continue; }
+        a.value  = (int32_t)i64_of(d, need(d, aj, "v", "banded_within", i));
+        a.radius = (uint32_t)i64_of(d, need(d, aj, "r", "banded_within", i));
+        b.value  = (int32_t)i64_of(d, need(d, bj, "v", "banded_within", i));
+        b.radius = (uint32_t)i64_of(d, need(d, bj, "r", "banded_within", i));
+
+        expect("banded_within", i, "a_within_b", eb_banded_within(a, b) ? 1 : 0,
+               js_bool(d, need(d, r, "a_within_b", "banded_within", i)) ? 1 : 0);
+        expect("banded_within", i, "b_within_a", eb_banded_within(b, a) ? 1 : 0,
+               js_bool(d, need(d, r, "b_within_a", "banded_within", i)) ? 1 : 0);
+        /* Containment implies overlap, in both directions. A port that mixed up
+         * the two predicates satisfies neither field on its own but breaks this. */
+        if (eb_banded_within(a, b) || eb_banded_within(b, a)) {
+            expect("banded_within", i, "within_implies_overlap",
+                   eb_banded_overlaps(a, b) ? 1 : 0, 1);
+        }
+    }
+}
+
+static void run_from_basis(const js_doc_t *d, int arr)
+{
+    static const char *keys[3] = { "radius_dim1", "radius_dim2", "radius_dim3" };
+    int i, n = js_len(d, arr);
+    for (i = 0; i < n; i++) {
+        int r = js_at(d, arr, i);
+        int64_t basis = i64_of(d, need(d, r, "basis", "from_basis", i));
+        uint32_t dim;
+        for (dim = 1u; dim <= 3u; dim++) {
+            int64_t want = i64_of(d, need(d, r, keys[dim - 1u], "from_basis", i));
+            uint32_t got = eb_banded_from_basis(0, (uint32_t)basis, dim).radius;
+            uint64_t target, g;
+            expect("from_basis", i, keys[dim - 1u], (long long)got, (long long)want);
+            /* Soundness and minimality, checked directly rather than only
+             * against the recorded number: a band that rounded DOWN would
+             * understate the very uncertainty it exists to carry. */
+            target = (uint64_t)dim * (uint64_t)basis * (uint64_t)basis;
+            g = (uint64_t)got;
+            expect("from_basis", i, "covers", 4u * g * g >= target, 1);
+            if (got > 0u) {
+                expect("from_basis", i, "minimal",
+                       4u * (g - 1u) * (g - 1u) < target, 1);
+            }
+        }
+    }
+}
+
+static void run_ibox2(const js_doc_t *d, int arr)
+{
+    int i, n = js_len(d, arr);
+    int saw_axis0 = 0, saw_axis1 = 0;
+    for (i = 0; i < n; i++) {
+        int r   = js_at(d, arr, i);
+        int aj  = need(d, r, "a", "ibox2_narrow", i);
+        int bj  = need(d, r, "b", "ibox2_narrow", i);
+        int res = need(d, r, "result", "ibox2_narrow", i);
+        eb_ibox_t a[2], b[2], out[2];
+        int ok, k;
+        const char *kind;
+
+        if (aj < 0 || bj < 0 || res < 0) { continue; }
+        for (k = 0; k < 2; k++) {
+            a[k].lo = i64_of(d, js_at(d, js_get(d, aj, "lo"), k));
+            a[k].hi = i64_of(d, js_at(d, js_get(d, aj, "hi"), k));
+            b[k].lo = i64_of(d, js_at(d, js_get(d, bj, "lo"), k));
+            b[k].hi = i64_of(d, js_at(d, js_get(d, bj, "hi"), k));
+        }
+        ok   = eb_ibox_narrow_n(a, b, 2u, out);
+        kind = js_text(d, need(d, res, "kind", "ibox2_narrow", i));
+        if (!kind) { failures++; continue; }
+
+        if (strcmp(kind, "box") == 0) {
+            expect("ibox2_narrow", i, "narrowed", ok, 1);
+            if (ok) {
+                int lo = js_get(d, res, "lo"), hi = js_get(d, res, "hi");
+                for (k = 0; k < 2; k++) {
+                    expect("ibox2_narrow", i, "lo", (long long)out[k].lo,
+                           i64_of(d, js_at(d, lo, k)));
+                    expect("ibox2_narrow", i, "hi", (long long)out[k].hi,
+                           i64_of(d, js_at(d, hi, k)));
+                }
+            }
+            expect("ibox2_narrow", i, "no_disagreement",
+                   eb_ibox_disagreement_n(a, b, 2u, 0, 0), 0);
+        } else if (strcmp(kind, "disjoint") == 0) {
+            uint32_t axis = 0u;
+            uint64_t gap = 0u;
+            expect("ibox2_narrow", i, "narrowed", ok, 0);
+            expect("ibox2_narrow", i, "disagrees",
+                   eb_ibox_disagreement_n(a, b, 2u, &axis, &gap), 1);
+            expect("ibox2_narrow", i, "axis", (long long)axis,
+                   i64_of(d, need(d, res, "axis", "ibox2_narrow", i)));
+            expect("ibox2_narrow", i, "gap", (long long)gap,
+                   i64_of(d, need(d, res, "gap", "ibox2_narrow", i)));
+            if (axis == 0u) { saw_axis0 = 1; } else { saw_axis1 = 1; }
+        } else {
+            failures++;
+            fprintf(stderr, "FAIL ibox2_narrow[%d]: unknown kind \"%s\"\n", i, kind);
+        }
+    }
+    /* The point of the two-dimensional section is that `disagreement` has a
+     * choice to make. If every disjoint case were worst on the same axis, a
+     * port returning the FIRST disagreeing axis would still pass. */
+    if (!saw_axis0 || !saw_axis1) {
+        failures++;
+        fprintf(stderr, "FAIL ibox2_narrow: fixture never makes both axes the "
+                        "worst one, so the axis choice is not being tested\n");
+    }
+}
+
 static void run_phase(const js_doc_t *d, int arr)
 {
     int i, n = js_len(d, arr);
@@ -281,7 +444,11 @@ static void run_phase(const js_doc_t *d, int arr)
 
 /* Every vector this substrate cannot represent, enumerated. Asserting the
  * total keeps a widening skip set from quietly eroding coverage. */
-#define EXPECTED_SKIPS 4   /* 1 isqrt (u128::MAX) + 3 dist_sq (i32 extremes) */
+#define EXPECTED_SKIPS 13
+/* 1 isqrt (u128::MAX)
+ * 3 dist_sq  (i32 extremes, on the hexagonal norm's 3-term budget)
+ * 9 dist_sq_z3 (the three i32-extreme triples, against each of three partners)
+ * 0 dist_sq_z1 -- the whole int32 range is in reach for one squared term */
 
 int main(int argc, char **argv)
 {
@@ -290,7 +457,9 @@ int main(int argc, char **argv)
     js_doc_t *d;
     int root, sec, i;
     static const char *sections[] = {
-        "covering", "isqrt", "dist_sq", "banded_narrow", "ibox_narrow", "phase"
+        "covering", "isqrt", "dist_sq", "dist_sq_z1", "dist_sq_z3",
+        "banded_narrow", "banded_within", "from_basis",
+        "ibox_narrow", "ibox2_narrow", "phase"
     };
     int total = 0;
 
@@ -322,8 +491,13 @@ int main(int argc, char **argv)
     run_covering(d, js_get(d, root, "covering"));
     run_isqrt   (d, js_get(d, root, "isqrt"));
     run_dist_sq (d, js_get(d, root, "dist_sq"));
+    run_dist_sq_z1(d, js_get(d, root, "dist_sq_z1"));
+    run_dist_sq_z3(d, js_get(d, root, "dist_sq_z3"));
     run_banded  (d, js_get(d, root, "banded_narrow"));
+    run_banded_within(d, js_get(d, root, "banded_within"));
+    run_from_basis   (d, js_get(d, root, "from_basis"));
     run_ibox    (d, js_get(d, root, "ibox_narrow"));
+    run_ibox2   (d, js_get(d, root, "ibox2_narrow"));
     run_phase   (d, js_get(d, root, "phase"));
 
     printf("vectors: %d   checks: %d   skipped (out of 64-bit range): %d\n",

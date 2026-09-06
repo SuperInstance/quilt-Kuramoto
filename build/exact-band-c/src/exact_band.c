@@ -93,6 +93,23 @@ int eb_coord_ok(int32_t v)
     return v >= -EB_COORD_MAX && v <= EB_COORD_MAX;
 }
 
+int eb_coord_ok_dim(int32_t v, uint32_t dim)
+{
+    int32_t lim;
+    switch (dim) {
+    case 1u: lim = EB_COORD_MAX_Z1; break;
+    case 2u: lim = EB_COORD_MAX_Z2; break;
+    case 3u: lim = EB_COORD_MAX_Z3; break;
+    default: return 0;
+    }
+    /* -INT32_MIN is not representable, so compare against the limit's negation
+     * only when it is not INT32_MAX -- at dim 1 the whole range is allowed. */
+    if (lim == EB_COORD_MAX_Z1) {
+        return 1;
+    }
+    return v >= -lim && v <= lim;
+}
+
 /* Squared difference of two in-range coordinates. */
 static uint64_t d2(int32_t a, int32_t b)
 {
@@ -111,6 +128,11 @@ uint64_t eb_dist_sq_z1(int32_t a, int32_t b)
 uint64_t eb_dist_sq_z2(int32_t ax, int32_t ay, int32_t bx, int32_t by)
 {
     return d2(ax, bx) + d2(ay, by);
+}
+
+uint64_t eb_dist_sq_z3(const int32_t a[3], const int32_t b[3])
+{
+    return d2(a[0], b[0]) + d2(a[1], b[1]) + d2(a[2], b[2]);
 }
 
 uint64_t eb_dist_sq_hex(int32_t aa, int32_t ab, int32_t ba, int32_t bb)
@@ -160,6 +182,39 @@ eb_banded_t eb_banded_widen(eb_banded_t b, uint32_t extra)
     uint64_t r = (uint64_t)b.radius + (uint64_t)extra;
     b.radius = (r > (uint64_t)EB_RADIUS_MAX) ? EB_RADIUS_MAX : (uint32_t)r;
     return b;
+}
+
+eb_banded_t eb_banded_from_basis(int32_t value, uint32_t basis, uint32_t dim)
+{
+    eb_banded_t out;
+    uint64_t target_x4;
+    uint64_t lo, hi, mid;
+
+    out.value = value;
+    out.radius = 0u;
+    if (dim == 0u || dim > 3u || basis == 0u) {
+        return out;   /* a zero basis induces no uncertainty */
+    }
+    if (basis > EB_SCALE_MAX) {
+        return out;   /* out of range: rejected, not wrapped */
+    }
+    target_x4 = (uint64_t)dim * basis * basis;
+
+    /* Smallest r with 4*r^2 >= dim*b^2. Bisect on an interval known to contain
+     * it: r <= dim*basis, because 4*(dim*b)^2 = 4*dim^2*b^2 >= dim*b^2 for any
+     * dim >= 1. Never a square root. */
+    lo = 0u;
+    hi = (uint64_t)dim * basis;
+    while (lo < hi) {
+        mid = lo + (hi - lo) / 2u;
+        if (4u * mid * mid >= target_x4) {
+            hi = mid;
+        } else {
+            lo = mid + 1u;
+        }
+    }
+    out.radius = (uint32_t)lo;
+    return out;
 }
 
 eb_narrowed_t eb_banded_narrow(eb_banded_t self, eb_banded_t obs)
@@ -228,6 +283,56 @@ uint64_t eb_ibox_disagreement(eb_ibox_t a, eb_ibox_t b)
     /* lo - hi can exceed INT64_MAX, but never UINT64_MAX, and unsigned
      * subtraction is defined modulo 2^64 -- which is the exact answer here. */
     return (uint64_t)lo - (uint64_t)hi;
+}
+
+int eb_ibox_narrow_n(const eb_ibox_t *a, const eb_ibox_t *b, uint32_t n,
+                     eb_ibox_t *out)
+{
+    uint32_t i;
+    /* Two passes: the disjointness test must complete before anything is
+     * written, or a NULL result would leave `out` half-updated when `out`
+     * aliases an input. */
+    for (i = 0; i < n; i++) {
+        int64_t lo = (a[i].lo > b[i].lo) ? a[i].lo : b[i].lo;
+        int64_t hi = (a[i].hi < b[i].hi) ? a[i].hi : b[i].hi;
+        if (lo > hi) {
+            return 0;
+        }
+    }
+    if (out != 0) {
+        for (i = 0; i < n; i++) {
+            int64_t lo = (a[i].lo > b[i].lo) ? a[i].lo : b[i].lo;
+            int64_t hi = (a[i].hi < b[i].hi) ? a[i].hi : b[i].hi;
+            out[i].lo = lo;
+            out[i].hi = hi;
+        }
+    }
+    return 1;
+}
+
+int eb_ibox_disagreement_n(const eb_ibox_t *a, const eb_ibox_t *b, uint32_t n,
+                           uint32_t *axis, uint64_t *gap)
+{
+    uint32_t i, worst_axis = 0u;
+    uint64_t worst_gap = 0u;
+    int found = 0;
+
+    for (i = 0; i < n; i++) {
+        uint64_t g = eb_ibox_disagreement(a[i], b[i]);
+        /* Strictly greater, so the FIRST axis wins a tie -- matching the Rust
+         * original, which a later-wins comparison would silently diverge from
+         * on any pair with equal gaps. */
+        if (g > 0u && (!found || g > worst_gap)) {
+            worst_gap = g;
+            worst_axis = i;
+            found = 1;
+        }
+    }
+    if (found) {
+        if (axis != 0) { *axis = worst_axis; }
+        if (gap != 0)  { *gap = worst_gap; }
+    }
+    return found;
 }
 
 /* ---- Phase -------------------------------------------------------------- */

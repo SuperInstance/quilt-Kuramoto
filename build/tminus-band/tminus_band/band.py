@@ -221,5 +221,42 @@ class Banded:
             return Contradiction(gap_sq)
         return Tightened(obs if obs.radius < self.radius else self)
 
+    def within(self, other: "Banded") -> bool:
+        """Does this band lie wholly inside `other`?
+
+        Exactly `||c1-c2|| + r1 <= r2`, rearranged to avoid a root: false unless
+        `r1 <= r2`, then `||c1-c2||**2 <= (r2-r1)**2`. The `r1 <= r2` test comes
+        first because it is what makes the subtraction meaningful -- reversing
+        the two is the subtle way to get this wrong, which is why the shared
+        vectors record both directions of every pair.
+        """
+        if self.radius > other.radius:
+            return False
+        slack = other.radius - self.radius
+        return self._dist_sq(other) <= slack * slack
+
     def widen(self, extra: int) -> "Banded":
         return Banded(self.value, self.radius + extra)
+
+    @classmethod
+    def from_basis(cls, value: Sequence[int], basis: int, dim: int) -> "Banded":
+        """The band a lattice of the given basis induces, in `dim` dimensions.
+
+        The covering radius `b*sqrt(n)/2` is irrational in general, so this is
+        the smallest INTEGER radius that still covers it -- the smallest `r` with
+        `4r**2 >= n*b**2`, found by bisection, never by `sqrt`.
+
+        Rounding up is the whole point: a band that rounded down would understate
+        the uncertainty it exists to represent.
+        """
+        target_x4 = dim * basis * basis
+        lo, hi = 0, max(1, basis) * max(1, dim)
+        while 4 * hi * hi < target_x4:
+            hi *= 2
+        while lo < hi:
+            mid = (lo + hi) // 2
+            if 4 * mid * mid >= target_x4:
+                hi = mid
+            else:
+                lo = mid + 1
+        return cls(tuple(value), lo)

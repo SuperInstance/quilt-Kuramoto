@@ -3,16 +3,16 @@
 The C99 port of `exact-band`: exact integer tolerance bands, no floating point,
 no allocation, no dependencies beyond `<stdint.h>`.
 
-**1,553 bytes of text at `-Os`. Zero `data`, zero `bss`.** One `.c` file and one
+**2,086 bytes of text at `-Os`. Zero `data`, zero `bss`.** One `.c` file and one
 header. This is the substrate the ESP32 firmware can link against.
 
 ```
 $ make
 ./build/unit
-checks: 4385501
+checks: 4389150
 PASS
 ./build/conformance tests/vectors.json
-vectors: 471   checks: 1676   skipped (out of 64-bit range): 4
+vectors: 801   checks: 2668   skipped (out of 64-bit range): 13
 PASS: C substrate agrees with the Rust and Python substrates.
 nofloat: no floating-point type in src/exact_band.c src/exact_band.h
 
@@ -38,19 +38,31 @@ So it works in 64 bits and **states its limits instead of hiding them**:
 
 | Limit | Value | Binding case |
 |---|---|---|
-| `EB_COORD_MAX` | 1 239 850 262 | hexagonal norm at `a = −b`, costing `3·(2C)²` |
+| `EB_COORD_MAX_Z1` | 2³¹ − 1 | one squared term — the whole `int32` range |
+| `EB_COORD_MAX_Z2` | 1 518 500 249 | two squared terms: `2·(2C)²` |
+| `EB_COORD_MAX_Z3` | 1 239 850 262 | three terms — also the hexagonal norm's worst point `a = −b` |
 | `EB_RADIUS_MAX` | 2³⁰ − 1 | two radii sum before squaring |
 | `EB_SCALE_MAX` | 2³¹ − 1 | `4·ε²` in the covering test |
+
+`EB_COORD_MAX` without a suffix is the tightest of the three, so code that does
+not know its lattice stays safe by default.
 
 Each is the **largest** value that still fits, not a round number chosen for
 comfort — and the test suite asserts both halves of that claim: that the limit
 fits and that one more does not.
 
-Inputs beyond a limit are **rejected, never wrapped**. Four of the 471 shared
-vectors fall outside this substrate's reach — one `isqrt` case (`u128::MAX`) and
-three `dist_sq` cases at the `i32` extremes. The conformance runner skips them,
-prints the count, and **fails if the count changes**, so a quietly widening skip
-set cannot erode coverage while the run still says PASS.
+Inputs beyond a limit are **rejected, never wrapped**. Thirteen of the 801
+shared vectors fall outside this substrate's reach — one `isqrt` case
+(`u128::MAX`), three `dist_sq` cases and nine `dist_sq_z3` cases at the `i32`
+extremes. The conformance runner skips them, prints the count, and **fails if the
+count changes**, so a quietly widening skip set cannot erode coverage while the
+run still says PASS.
+
+Note that `dist_sq_z1` skips **nothing**: one squared `int32` difference is at
+most `(2³² − 1)²`, which fits `uint64_t` comfortably, so the whole `int32` range
+is in reach there. Quoting the hexagonal limit for every lattice would have
+refused inputs this port handles exactly — which is why the limits are per
+lattice, and why each is asserted tight in its own dimension.
 
 That is a real difference between the substrates. It is reported rather than
 papered over.
@@ -92,7 +104,7 @@ The Rust doc comment has been corrected to match.
 
 `make` runs three things, and all three can fail:
 
-**`unit` — 4,385,501 checks.** Properties checked against their *definitions*,
+**`unit` — 4,389,150 checks.** Properties checked against their *definitions*,
 not against a sibling implementation, because a shared mistake reproduces
 perfectly across substrates. `isqrt` exhaustively over `[0, 100000)` plus the
 top of the `uint64_t` range; the Eisenstein norm's positive-definiteness over a
@@ -104,13 +116,19 @@ every integer point* in both inputs and requiring the result to contain them
 all; `IBox::narrow` exactness the same way — `p` in the result **iff** `p` in
 both, since boxes, unlike balls, lose nothing to intersection.
 
-**`conformance` — the same 471 vectors the other two substrates read.** Not a
+**`conformance` — the same 801 vectors the other two substrates read.** Not a
 transcription of them: the runner parses `vectors.json` itself, because a
 hand-copied fixture is exactly where a conformance suite goes quietly wrong. It
-also checks two invariants the file cannot express — that `|offset| == distance`
-for every phase pair, and that `disagreement()` is zero exactly when `narrow()`
-succeeds — which catch a substrate that satisfies each recorded field
-independently while disagreeing about what the fields mean.
+also checks invariants the file cannot express — that `|offset| == distance` for
+every phase pair, that `disagreement()` is zero exactly when `narrow()` succeeds,
+that containment implies overlap, and that every `from_basis` radius both covers
+the deep hole and is minimal — which catch a substrate that satisfies each
+recorded field independently while disagreeing about what the fields mean.
+
+It also refuses to pass a fixture that cannot test what it claims to: the
+two-dimensional box section **fails if no disjoint pair is worst on axis 0 and
+none is worst on axis 1**, because a port returning the *first* disagreeing axis
+rather than the *worst* one would otherwise slip through.
 
 **`nofloat` — the central claim, checked.** The library says it contains no
 floating point; the build verifies it, and the check itself has been tested
@@ -133,7 +151,7 @@ real hardware before relying on it.
 
 ```
 src/exact_band.h    the interface, with every range limit derived in a comment
-src/exact_band.c    the implementation -- 282 lines, no branches on width
+src/exact_band.c    the implementation -- one file, no branches on word size
 tests/test_exact_band.c   property tests and negative controls
 tests/conformance.c       runs the shared vectors
 tests/json.[ch]           a minimal JSON reader, test-only on purpose:

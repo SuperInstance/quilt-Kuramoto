@@ -23,7 +23,7 @@ VECTORS = json.loads((pathlib.Path(__file__).parent / "vectors.json").read_text(
 def test_vectors_are_actually_loaded():
     """Guard against a silently empty fixture making every test below vacuous."""
     total = sum(len(v) for v in VECTORS.values())
-    assert total >= 240, f"expected the full vector set, got {total}"
+    assert total >= 801, f"expected the full vector set, got {total}"
 
 
 def test_covering_matches_rust():
@@ -85,3 +85,103 @@ def test_ibox_narrow_matches_rust():
                 assert dis is None
             else:
                 assert dis == (want["axis"], want["gap"])
+
+
+def test_dist_sq_z1_matches_rust():
+    """One dimension, including both i32 extremes.
+
+    These were computed by the emitter and thrown away in its first version, so
+    no substrate was ever held to them. The widest case here is
+    `(i32::MAX - i32::MIN)**2 = (2**32 - 1)**2`, which is the largest squared
+    distance any one-dimensional lattice can produce.
+    """
+    seen_extreme = False
+    for v in VECTORS["dist_sq_z1"]:
+        got = (v["a"] - v["b"]) ** 2
+        assert got == int(v["d2"]), f"z1 {v}"
+        if int(v["d2"]) == (2 ** 32 - 1) ** 2:
+            seen_extreme = True
+    assert seen_extreme, "the widest one-dimensional case should be in the fixture"
+
+
+def test_dist_sq_z3_matches_rust():
+    """Three dimensions -- the only case that sums three squared terms.
+
+    That is precisely the shape a 64-bit port has to bound, so it is worth
+    pinning across substrates rather than inferring from the two-dimensional
+    vectors.
+    """
+    for v in VECTORS["dist_sq_z3"]:
+        got = sum((a - b) ** 2 for a, b in zip(v["a"], v["b"]))
+        assert got == int(v["d2"]), f"z3 {v}"
+
+
+def test_banded_within_matches_rust():
+    """Containment, in BOTH directions for every pair.
+
+    `within` is neither symmetric nor the same as `overlaps`, and the natural
+    way to get it wrong -- comparing the radii the other way round before
+    subtracting -- produces an answer that is right for one direction of each
+    pair and wrong for the other. Recording both directions is what makes that
+    mistake visible.
+    """
+    both, neither, one_way = 0, 0, 0
+    for v in VECTORS["banded_within"]:
+        a = Banded((v["a"]["v"],), v["a"]["r"])
+        b = Banded((v["b"]["v"],), v["b"]["r"])
+        assert a.within(b) is v["a_within_b"], f"a within b: {v}"
+        assert b.within(a) is v["b_within_a"], f"b within a: {v}"
+        if v["a_within_b"] and v["b_within_a"]:
+            both += 1
+            assert a.value == b.value and a.radius == b.radius, \
+                "mutual containment means the bands are equal"
+        elif v["a_within_b"] or v["b_within_a"]:
+            one_way += 1
+        else:
+            neither += 1
+    assert both and one_way and neither, \
+        f"fixture should cover all three cases, got {both}/{one_way}/{neither}"
+
+
+def test_from_basis_matches_rust_and_never_understates():
+    """The band a lattice basis induces, rounded UP.
+
+    Soundness is the whole claim: `4r**2 >= n*b**2` must hold, and `r-1` must
+    fail it, or the band would understate the uncertainty it exists to carry.
+    Checked here directly, not just against the recorded number.
+    """
+    for v in VECTORS["from_basis"]:
+        b = v["basis"]
+        for dim, key in ((1, "radius_dim1"), (2, "radius_dim2"), (3, "radius_dim3")):
+            r = Banded.from_basis((0,) * dim, b, dim).radius
+            assert r == v[key], f"from_basis dim={dim} {v}"
+            assert 4 * r * r >= dim * b * b, f"understated at dim={dim}: {v}"
+            if r > 0:
+                assert 4 * (r - 1) * (r - 1) < dim * b * b, \
+                    f"not minimal at dim={dim}: {v}"
+
+
+def test_ibox_two_dimensional_narrow_matches_rust():
+    """Two axes, so `disagreement` finally has a choice to make.
+
+    Every earlier ibox vector was one-dimensional, where the worst axis is the
+    only axis. Here the fixture contains disjoint pairs whose gap is larger on
+    axis 0 and pairs whose gap is larger on axis 1, so a port that returned the
+    first disagreeing axis rather than the worst one now fails.
+    """
+    axes_seen = set()
+    for v in VECTORS["ibox2_narrow"]:
+        a = IBox(tuple(v["a"]["lo"]), tuple(v["a"]["hi"]))
+        b = IBox(tuple(v["b"]["lo"]), tuple(v["b"]["hi"]))
+        got, want = a.narrow(b), v["result"]
+        if want["kind"] == "box":
+            assert got is not None, f"expected a box: {v}"
+            assert got.lo == tuple(want["lo"]) and got.hi == tuple(want["hi"])
+            assert a.disagreement(b) is None
+        else:
+            assert got is None, f"expected disjoint: {v}"
+            dis = a.disagreement(b)
+            assert dis == (want["axis"], want["gap"]), f"axis choice: {v}"
+            axes_seen.add(want["axis"])
+    assert axes_seen == {0, 1}, \
+        f"fixture must exercise both axes as the worst one, saw {axes_seen}"
