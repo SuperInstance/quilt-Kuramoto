@@ -197,3 +197,75 @@ port must reproduce every one. Verified in sync with its generator as of this
 commit. This mirrors the ecosystem's existing byte-exact discipline, where a cell
 state hash agrees across five language ports — and it means a divergence between
 the Rust and Python substrates is visible rather than latent.
+
+---
+
+# P3 — `tower`: the spec→C generator, lifted and generalised
+
+Built 2026-09-06, at `build/tower/`. Extracted from
+`quilt-verilog/tools/tower/emith.py`, which had **zero coupling to Verilog** —
+pure Python emitting C — but lived in an FPGA repo where nobody looking for a
+code generator would find it.
+
+## Compatibility is measured, not claimed
+
+tower reproduces all **17 hand-computed golden anchors** from the original
+`tools/tower/verify.py` — anchors computed independently of either generator —
+and loads the original `oil-pressure-port.cell.yaml` unmodified, including its
+unit-suffixed `range_psi:` key.
+
+## What was generalised, and why it had to be
+
+| | Original | tower |
+|---|---|---|
+| Units | psi only, hardcoded regex | any unit |
+| Range | rejects non-zero minimum | any range, including negative |
+| Equation | one shape | affine, optional offset and divisor |
+| Exactness gate | ✓ | ✓ kept |
+
+The 0-based restriction was not theoretical polish. A survey found real signed
+quantities in the same ecosystem: `quilt-esp32/firmware/src/vessel_qm.h` carries
+a generated geofence with `lon_lo = -152500000, lon_hi = -152350000`, entirely
+negative; rudder angle, rate of turn and heading deviation are all signed by
+physical convention.
+
+## Direction matters — the fathoms lesson
+
+Fathoms → metres is a *multiplication* (1 fathom = 1,828,800 µm exactly) and is
+exact; `quilt-esp32`'s `nmea.c` already relies on it. Metres → fathoms *divides*
+by 1.8288, giving `625/1143`, which never reduces. The same physical
+relationship is exact one way and not the other, and the gate catches the
+direction that fails. Shipped as a worked example that must be rejected.
+
+## Two findings from the survey
+
+**Only one cell spec exists in the entire org.** `oil-pressure-port.cell.yaml`
+is it. The generalisation was therefore driven by real consumer code rather than
+by a family of specs — which is worth stating plainly rather than implying a
+broader mandate.
+
+**A unit bug in shipped firmware.** `quilt-esp32/firmware/src/nmea/nmea.c`
+converts km/h to knots with `* 5 / 18`. That is the km/h→**m/s** factor;
+km/h→knots is `1000/1852 = 250/463`. Verified by exact rational arithmetic.
+Worth an upstream issue alongside the `eisenstein` overflow one.
+
+**Five independent NMEA parsers** exist across the org (`quilt-esp32`,
+`nmea-quilt-cell`, `mudra-vessel-bridge`, `cocapn-python`, `cocapn-marine`),
+none unified, only one integer-only. That is the clearest consumer case for this
+generator.
+
+## Honest limitations, recorded
+
+- Affine only. No dyadic staircases for constants that refuse to be whole —
+  SEMANTIC-TOWER §5.3's acknowledged fallback. Such specs are rejected rather
+  than approximated, but rejection is not support.
+- Circular quantities are not modelled. A squared difference judges 359° and 1°
+  as 358 apart rather than 2. Both `quilt-esp32` and `cocapn-marine` handle this
+  by hand today. It needs a different judge, not a different basis.
+
+## A wart the tests caught
+
+Adding `tower/__init__.py` with `from .emit_c import emit_c` made the exported
+function shadow its own module, so `import tower.emit_c` returned a function.
+The mutation test failed immediately on it. The emitter now lives in
+`tower.emit`, and the collision is gone.

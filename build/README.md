@@ -56,3 +56,22 @@ remote. Regenerate the conformance vectors any time with:
 ```bash
 cd ../exact-band && cargo run --release --example emit_vectors > ../tminus-band/tests/vectors.json
 ```
+
+## `tower/`
+
+**Ready to extract.** Lifted out of `quilt-verilog/tools/tower/emith.py`, which
+had zero coupling to Verilog but was buried in an FPGA repo. Compiles a
+physical-quantity cell spec into exact, float-free C — and **refuses to compile
+it when the units don't work out**.
+
+- 15 tests, including a mutation test proving the gate can fail
+- Reproduces all **17 hand-computed golden anchors** from the original's
+  `verify.py`, so compatibility is measured rather than asserted
+- Loads the original `oil-pressure-port.cell.yaml` unmodified
+- Generalised: any unit, any range including negative, optional offset/divisor —
+  the original was psi-only and rejected non-zero minimums
+- The gate compiles the generated C with `-Wall -Wextra -Werror`, runs it, and
+  cross-checks every printed line against a Python model *and* exact `Fraction`
+  arithmetic
+
+Same extraction procedure, with `SuperInstance/tower` as the remote.
