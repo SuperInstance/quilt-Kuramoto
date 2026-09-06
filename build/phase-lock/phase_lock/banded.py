@@ -47,8 +47,12 @@ class Band:
         """
         if self.contains(ring, slot):
             off = ring.offset(self.centre, slot)
-            # Move the centre a fraction of the way, exactly (truncating toward zero).
-            self.centre = ring.reduce(self.centre + off // 4)
+            # Move the centre a fraction of the way, TRUNCATING toward zero.
+            # Python's `//` floors, which biases negative offsets downward and
+            # would walk the centre in one direction over many ticks. The sign
+            # must be carried out and back, exactly as in the render path.
+            step_ = off // 4 if off >= 0 else -((-off) // 4)
+            self.centre = ring.reduce(self.centre + step_)
             self.half = max(0, self.half - step)
             return True
         self.half = min(max_half, self.half + 2 * step)

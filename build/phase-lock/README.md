@@ -138,21 +138,35 @@ confidence*. Wide band, small step; narrow band, commit.
 
 | K | plain | banded |
 |---|---|---|
-| 0.12 | **93.3%** | 28.3% |
-| 0.50 | **90.8%** | 20.0% |
+| 0.12 | **93.3%** | 26.7% |
+| 0.50 | **90.8%** | 13.3% |
 | 1.00 | **89.2%** | 10.8% |
 
 Four attempts to rescue it, all refuted:
 
-1. **Under-coupling?** Swept K up to 32×. Banded's best is 29.2%; plain's is 93.3%.
+1. **Under-coupling?** Swept K up to 32×. Banded's best is 27.5%; plain's is 93.3%.
 2. **Warm-up artifact?** Starting *more confident* makes it **worse** — 10.8% at
-   `max_half=90` down to 1.7% at `max_half=5`. A narrow band that is wrong
+   `max_half=90` down to **0.0%** at `max_half=5`. A narrow band that is wrong
    resists correction, so oscillators commit hard to bad beliefs.
 3. **Wrong regime?** A carried estimate should earn its keep when observation is
    expensive. Under sparse observation it collapses to **0.0%**, while plain
    coupling using stale positions degrades gracefully (87.5% → 66.7%).
 4. **Missing decay?** Widening the band on unobserved ticks — the exact fix
    `tminus-band` uses for the over-confidence trap — does not help either.
+
+### A bug was found in the banded implementation, and the result survived it
+
+An adversarial review flagged that `Band.narrow_toward` pulled the centre by
+`off // 4`, and Python's `//` **floors** — so a negative offset moved the centre
+further than a positive one of the same size, walking it in one direction over
+many ticks. That is a real bug, and it was in the code that produced the
+negative result.
+
+It is fixed (the sign is now carried out and back, as in the render path), and
+every number above is post-fix. The conclusion did not change: banded went from
+28.3% to 26.7% at K=0.12, and all four rescues still fail. Recorded because a
+negative result found with buggy code is worth nothing until the bug is ruled
+out as its cause.
 
 ### Why, and what it does not mean
 

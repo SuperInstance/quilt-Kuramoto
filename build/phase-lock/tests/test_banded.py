@@ -96,3 +96,22 @@ def test_decay_does_not_rescue_it_either():
     decayed = _rate(simulate_banded, k_num=2, k_den=8, observe_every=4, seed=0,
                     stale_widen=3)
     assert decayed <= no_decay + 0.05, "decay should not materially rescue it"
+
+
+def test_centre_pull_is_symmetric_about_zero():
+    """Regression: Python's `//` floors, which biased the centre one way.
+
+    A review caught `off // 4` moving a negative offset further than a positive
+    one of the same size, walking the band centre in one direction over many
+    ticks. The pull must be symmetric.
+    """
+    ring = Ring(360)
+    for mag in range(1, 60):
+        up = Band(centre=180, half=90)
+        down = Band(centre=180, half=90)
+        up.narrow_toward(ring, ring.reduce(180 + mag), step=0, max_half=90)
+        down.narrow_toward(ring, ring.reduce(180 - mag), step=0, max_half=90)
+        moved_up = ring.offset(180, up.centre)
+        moved_down = ring.offset(180, down.centre)
+        assert moved_up == -moved_down, (
+            f"asymmetric pull at offset {mag}: +{moved_up} vs {moved_down}")
