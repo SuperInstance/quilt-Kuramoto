@@ -75,3 +75,22 @@ it when the units don't work out**.
   arithmetic
 
 Same extraction procedure, with `SuperInstance/tower` as the remote.
+
+## `phase-lock/`
+
+**The experiment this repository is named for.** Discrete-time Kuramoto
+oscillators in exact integer arithmetic, where a collision is `==` rather than a
+comparison against a chosen epsilon.
+
+- **Frozen locking implies crossings stop: 2,600 runs, 1,069 locked, zero
+  counterexamples.** An exact claim, observable only because both sides are
+  equalities.
+- Found and corrected two definitional errors: a *coincidence* (state) is not a
+  *crossing* (event) — they measurably invert — and phase-locked is not
+  synchronised, since the splay state is locked at maximum spread.
+- Measured a sharp **upper critical coupling** near K=1.25, a discrete-map
+  phenomenon with no continuous-Kuramoto counterpart.
+- 12 tests, plus `run_study.py` which regenerates every number in the README.
+
+Built on `exact-band`'s `Phase<N>`. Same extraction procedure, with
+`SuperInstance/phase-lock` as the remote.

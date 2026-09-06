@@ -26,11 +26,13 @@
 #![deny(missing_docs)]
 
 pub mod boxed;
+pub mod circular;
 pub mod covering;
 pub mod isqrt;
 pub mod lattice;
 
 pub use boxed::IBox;
+pub use circular::{Heading, Phase};
 pub use lattice::{Hex, Lattice, Z1, Z2, Z3};
 
 /// An exact lattice value carrying an integer tolerance band.

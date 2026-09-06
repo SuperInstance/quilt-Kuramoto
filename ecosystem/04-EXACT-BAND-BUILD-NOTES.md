@@ -269,3 +269,67 @@ Adding `tower/__init__.py` with `from .emit_c import emit_c` made the exported
 function shadow its own module, so `import tower.emit_c` returned a function.
 The mutation test failed immediately on it. The emitter now lives in
 `tower.emit`, and the collision is gone.
+
+---
+
+# The Kuramoto experiment — making the repo's name mean something
+
+Built 2026-09-06, at `build/phase-lock/`.
+
+This repository is called `quilt-Kuramoto`. The name came from **one analogy in
+one research document** — nothing in the ecosystem implemented a Kuramoto model.
+This is the experiment that closes that gap, and it corrected two things the
+analogy had wrong.
+
+## Why it needed exact integers first
+
+The phase-locking criterion for discrete-time Kuramoto is stated in terms of
+*finitely many collisions*. In floating point a collision is a comparison
+against an epsilon you picked, and phase-locking is "offsets stop changing"
+within a threshold over a window. Neither is decidable. On `ℤ/M` both are
+equalities.
+
+That required a new type — `exact_band::Phase<N>` — which also fixes the
+circular-quantity gap recorded as a `tower` limitation: a squared difference
+judges 359° and 1° as 358 apart. Both `quilt-esp32` and `cocapn-marine` work
+around that by hand today.
+
+## The result
+
+**Frozen locking implies crossings stop: 2,600 runs, 1,069 locked, zero
+counterexamples.** Exact, not statistical.
+
+The converse fails, and the asymmetry is the interesting part: a tight cluster
+stops overtaking long before its offsets stop jittering by one slot.
+Crossing-free is strictly weaker than frozen.
+
+## Two definitional errors the experiment caught
+
+**A coincidence is not a collision.** My first run counted pairs *sharing a
+slot* and produced a result that inverted the theory — coincidences were highest
+when the system was most synchronised. Of course: a tight cluster on a discrete
+circle shares slots constantly. The continuous theory means a *crossing* — an
+overtaking event, a sign change in the signed offset. On one system: K=1.0 gave
+16 crossings and 1592 coincidences; K=2.0 gave 20752 crossings and 398
+coincidences. They invert. Anything reasoning about "collisions" in discrete
+phase space must say which it means — and document 18's Kuramoto row does not.
+
+**Phase-locked is not synchronised.** Four oscillators at 90° spacing with equal
+frequencies sit in a splay state: coupling sums cancel exactly, offsets never
+move, spread is maximal. Testing coherence as a proxy for locking disagreed on
+116 of 480 runs, every disagreement one of these two cases.
+
+## An upper critical coupling
+
+Continuous Kuramoto has no upper bound; more coupling never hurts. The discrete
+map overshoots. Locking collapses between K=1.0 (88.5%) and K=1.25 (19.5%) and
+is gone by K=2.0. A reproducible non-monotonic dip at K=0.75 (64%) is
+unexplained and recorded as such.
+
+## What it does not show
+
+It does not support the quantum-bridge argument. That document mapped Kuramoto
+onto a multi-agent timing protocol as one of ten analogies; this tests the
+oscillator model, not the analogy — and if anything complicates it, since the
+criterion it cites needs the crossing/coincidence distinction to survive
+translation into a discrete setting.
