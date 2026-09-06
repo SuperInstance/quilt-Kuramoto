@@ -85,8 +85,15 @@ map overshoots, and the effect is sharp:
    K= 2.00    0.0%
 ```
 
-Locking collapses between K=1.0 and K=1.25 and is gone by K=2.0. There is also a
-reproducible non-monotonic dip at K=0.75 (64%) that I have not explained.
+Locking collapses between K=1.0 and K=1.25 and is gone by K=2.0.
+
+Two anomalies, recorded rather than smoothed:
+- A reproducible non-monotonic dip at **K=0.75 (64%)**, between neighbours at
+  89.5% and 88.5%. Unexplained.
+- Under sine coupling, lock rate is 0.0% from K=1.25 through K=2.00 and then
+  **0.5% at K=3.00** — one system out of 200 re-locks. Also unexplained, and
+  small enough that it could be a single well-conditioned initial condition
+  rather than a real re-entrant window.
 
 ## Two coupling laws, honestly labelled
 
@@ -115,7 +122,8 @@ python run_study.py        # writes results/study.json
 python -m pytest tests/ -q # 12 tests
 ```
 
-Every number above comes from `run_study.py`. Same seed, same answer, any machine.
+Every number above comes from `run_study.py` and is checked against
+`results/study.json`, which is committed. Same seed, same answer, any machine.
 
 ## What this does not show
 
