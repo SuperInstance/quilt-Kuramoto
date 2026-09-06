@@ -333,3 +333,36 @@ onto a multi-agent timing protocol as one of ten analogies; this tests the
 oscillator model, not the analogy — and if anything complicates it, since the
 criterion it cites needs the crossing/coincidence distinction to survive
 translation into a discrete setting.
+
+## The band-coupling experiment — a negative result, recorded
+
+Having built exact bands and a narrowing predict-and-confirm loop, the obvious
+question was whether band coupling phase-locks better than plain proportional
+coupling. **It does not**, and four rescue attempts all failed:
+
+| Attempt | Result |
+|---|---|
+| Sweep K up to 32× | banded best 29.2% vs plain 93.3% |
+| Start more confident | **worse** — 10.8% → 1.7% as the band narrows |
+| Sparse observation (the regime an estimate should win) | collapses to 0.0%; plain-with-stale-data degrades gracefully to 66.7% |
+| Add stale-widening decay | no material change |
+
+**Why.** A band is a filter; filters add lag; lag destabilises a feedback loop.
+And confidence-scaling makes an oscillator move *least* exactly when it is
+uncertain and far from consensus — which is when it most needs to move.
+
+**Scope.** This does not refute band-based coordination generally; it refutes it
+for a tight, fast, fully-observable control loop, where a plain proportional
+controller is near-optimal and any estimator is overhead. The corpus's own H4
+claim is scoped to "the coordination regime, not the control regime" — this
+result is consistent with that scoping and shows the idea does not silently
+generalise past it.
+
+Attempt 2 is independently useful: it is the over-confidence trap measured
+directly. A narrow band that is wrong resists correction, so agents commit hard
+to bad beliefs. That is the failure `tminus-band`'s `stale_widen_per_tick`
+exists to prevent — and here it is visible as a lock-rate collapse rather than
+as an argument.
+
+The negative result is pinned by six tests so a later change cannot quietly move
+the claim.

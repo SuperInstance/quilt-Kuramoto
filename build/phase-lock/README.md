@@ -125,6 +125,52 @@ python -m pytest tests/ -q # 12 tests
 Every number above comes from `run_study.py` and is checked against
 `results/study.json`, which is committed. Same seed, same answer, any machine.
 
+## The band experiment — a negative result
+
+Having built exact tolerance bands (`exact-band`) and a predict-and-confirm loop
+that narrows them (`tminus-band`), the obvious next question was whether band
+coupling phase-locks better than plain proportional coupling.
+
+**It does not.** `phase_lock/banded.py` gives each oscillator a band recording
+where it believes the ensemble is; the band narrows on agreement, widens on
+contradiction, and the oscillator steps toward its centre *scaled by its own
+confidence*. Wide band, small step; narrow band, commit.
+
+| K | plain | banded |
+|---|---|---|
+| 0.12 | **93.3%** | 28.3% |
+| 0.50 | **90.8%** | 20.0% |
+| 1.00 | **89.2%** | 10.8% |
+
+Four attempts to rescue it, all refuted:
+
+1. **Under-coupling?** Swept K up to 32×. Banded's best is 29.2%; plain's is 93.3%.
+2. **Warm-up artifact?** Starting *more confident* makes it **worse** — 10.8% at
+   `max_half=90` down to 1.7% at `max_half=5`. A narrow band that is wrong
+   resists correction, so oscillators commit hard to bad beliefs.
+3. **Wrong regime?** A carried estimate should earn its keep when observation is
+   expensive. Under sparse observation it collapses to **0.0%**, while plain
+   coupling using stale positions degrades gracefully (87.5% → 66.7%).
+4. **Missing decay?** Widening the band on unobserved ticks — the exact fix
+   `tminus-band` uses for the over-confidence trap — does not help either.
+
+### Why, and what it does not mean
+
+A band is a **filter**. Filters add lag, and lag destabilises a feedback loop.
+Worse, confidence-scaling makes an oscillator move *least* exactly when it is
+uncertain and far from consensus — which is when it most needs to move.
+
+This does **not** refute band-based coordination generally. It refutes it *for
+this task*. Phase-locking is a tight, fast, fully-observable control loop — the
+regime where a plain proportional controller is near-optimal and any estimator
+is pure overhead. Notably, the corpus's own H4 claim for predict-and-confirm is
+scoped to "the coordination regime, not the control regime". This result is
+consistent with that scoping, and it shows the idea does not silently generalise
+past it.
+
+The negative result is pinned by tests, so a later change cannot quietly move
+the claim.
+
 ## What this does not show
 
 - **This is not evidence for the quantum-bridge argument.** That document mapped
