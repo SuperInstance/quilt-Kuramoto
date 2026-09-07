@@ -253,15 +253,41 @@ impl<const K: usize> Zono<K> {
             self.coeffs[self.len] = c;
             self.len += 1;
         } else {
-            // Full: widen the smallest existing term instead. Still sound.
+            // Full. The slot must be freed by absorbing an existing term into a
+            // FRESH symbol -- never by adding the spill to an existing one.
+            //
+            // Merging spill into a live symbol id is UNSOUND, and subtly so: two
+            // forms that both dump error into the same shared symbol will cancel
+            // that error when subtracted, because subtraction cancels shared
+            // symbols by design. The result is a band that is too NARROW, which
+            // is the one failure mode that matters -- it lets a caller conclude
+            // that two values agree when they do not. An earlier version of this
+            // branch did exactly that, and called itself sound in a comment.
+            //
+            // Replacing a shared term `aₛεₛ` with a fresh term of magnitude |aₛ|
+            // is a genuine over-approximation: the new symbol ranges over the
+            // whole of [−1, 1] independently, so it covers everything `εₛ` could
+            // have done. What is lost is the correlation with other forms, and
+            // losing correlation can only widen later results, never narrow them.
             let mut min_i = 0usize;
             let mut k = 1usize;
             while k < self.len {
                 if self.coeffs[k].abs() < self.coeffs[min_i].abs() { min_i = k; }
                 k += 1;
             }
-            let widened = (self.coeffs[min_i] as i128).abs() + (c as i128);
-            self.coeffs[min_i] = clamp_i64(widened);
+            let absorbed = (self.coeffs[min_i] as i128).abs() + (c as i128);
+            self.ids[min_i] = pool.fresh();
+            self.coeffs[min_i] = clamp_i64(absorbed);
+        }
+        // Terms must stay sorted by id for `merge` to pair shared symbols; a
+        // fresh id is the largest yet minted, so bubble it to the end.
+        let mut k = 1usize;
+        while k < self.len {
+            if self.ids[k - 1] > self.ids[k] {
+                self.ids.swap(k - 1, k);
+                self.coeffs.swap(k - 1, k);
+            }
+            k += 1;
         }
     }
 

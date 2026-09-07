@@ -238,3 +238,52 @@ opposite directions, forever.
 It is never wrong. It simply **cannot conclude that the nodes agree** — at any
 number of rounds, for any tolerance below 48. That is the operation this crate
 is for, and it is the one interval arithmetic cannot do.
+
+### Stress-testing that result — which found a soundness bug
+
+The agreement demo above is a clean setup: three nodes, one reading each,
+division by a power of two, ample capacity. `cargo run --release --example
+agreement_sweep` breaks all three assumptions — bigger rings, and **fresh
+measurement noise every round**, which makes the live source count grow as
+`n·T` and forces the fixed capacity to condense.
+
+It immediately reported widths **narrower than the truth**, which is impossible
+for a sound over-approximation. The cause was in `absorb_spill`: when the form
+was full it added the spilled magnitude to an *existing* term, keeping that
+term's symbol id. Two forms that both dumped error into the same shared symbol
+then **cancelled that error when subtracted** — because cancelling shared
+symbols is exactly what subtraction is for — and the difference came out too
+narrow.
+
+A band that is too narrow is the one failure mode that matters here: it lets a
+caller conclude two values agree when they do not. The fix frees the slot by
+absorbing an existing term into a **fresh** symbol instead, which loses
+correlation and can therefore only widen.
+
+Worth being precise about what caught it. The whole suite passed with the bug
+in, and so does the hand-written regression test — reverting the fix fails only
+`condensation_stays_sound_across_a_consensus_sweep`, the one driven by the real
+recurrence. Hand-picked cases missed it; the sweep found it.
+
+### How much capacity you actually need
+
+Disagreement width after 8 rounds, thousandths of a unit. Every cell is
+asserted `≥ true` on each run, so this table cannot go quietly unsound again.
+
+**Fresh measurement noise every round:**
+
+| nodes | true | K=8 | K=32 | K=128 | box |
+|---|---|---|---|---|---|
+| 3 | 10667 | 57034 | **10667** | **10667** | 112000 |
+| 5 | 19805 | 67043 | 28180 | **19805** | 112000 |
+| 8 | 31066 | 85883 | 52839 | **31066** | 112000 |
+| 12 | 34369 | 85883 | 61927 | **34369** | 112000 |
+
+The rule is just the source count: with `n` nodes and `T` rounds each minting a
+reading, roughly `n·(T+1)` symbols are live — 108 at `n=12, T=8`, which is why
+`K=128` is exact and `K=32` is not.
+
+At `K = 12·(bytes per term)` this is about 1.5 KB per value at `K=128` — real,
+but affordable on the targets this crate is aimed at. And the degradation is
+graceful: even at `K=8`, condensing constantly, the zonotope is still ~2× better
+than the box rather than collapsing to it.

@@ -359,3 +359,94 @@ fn rescaling_is_sound_and_is_the_only_place_fixed_loses_tightness() {
     assert!(f.rescale(0, &mut pool).numerator().condensations() > 0,
         "and it is the one place a charge is minted");
 }
+
+#[test]
+fn condensation_must_never_narrow_a_difference_of_shared_forms() {
+    // REGRESSION. The first version of `absorb_spill` freed no slot when full:
+    // it added the spilled magnitude to an EXISTING term, keeping that term's
+    // symbol id. Two forms that both dumped error into the same shared symbol
+    // then cancelled that error when subtracted -- because cancelling shared
+    // symbols is precisely what subtraction is for -- and the result came out
+    // NARROWER than the truth.
+    //
+    // That is the one failure mode that matters: a band too narrow lets a
+    // caller conclude two values agree when they do not. The whole test suite
+    // passed anyway, because nothing combined condensation, shared symbols and
+    // subtraction in one computation.
+    //
+    // Worth being exact about what caught it: this hand-built case does NOT.
+    // Reverting the fix leaves this test green and fails only
+    // `condensation_stays_sound_across_a_consensus_sweep` below. The bug needed
+    // the real recurrence -- many rounds, heavy condensation, correlated forms
+    // -- to surface. It is kept as the readable statement of the property; the
+    // sweep is the one with teeth.
+    let mut pool = Symbols::new();
+    let shared: [u32; 4] = [pool.fresh(), pool.fresh(), pool.fresh(), pool.fresh()];
+
+    // Build two forms over the same sources, forcing the small one to condense.
+    let mut small_a = Zono::<4>::exact(500);
+    let mut small_b = Zono::<4>::exact(500);
+    let mut ref_a = Zono::<64>::exact(500);
+    let mut ref_b = Zono::<64>::exact(500);
+    for (k, &s) in shared.iter().enumerate() {
+        let ca = 7 * (k as i64 + 1);
+        let cb = 3 * (k as i64 + 1);
+        small_a = small_a.add(Zono::<4>::from_symbol(0, s, ca), &mut pool);
+        small_b = small_b.add(Zono::<4>::from_symbol(0, s, cb), &mut pool);
+        ref_a = ref_a.add(Zono::<64>::from_symbol(0, s, ca), &mut pool);
+        ref_b = ref_b.add(Zono::<64>::from_symbol(0, s, cb), &mut pool);
+        // Extra independent sources, to push the small form past capacity.
+        let extra = pool.fresh();
+        small_a = small_a.add(Zono::<4>::from_symbol(0, extra, 5), &mut pool);
+        ref_a = ref_a.add(Zono::<64>::from_symbol(0, extra, 5), &mut pool);
+    }
+
+    assert!(small_a.condensations() > 0, "the small form must have condensed");
+    let small_d = small_a.sub(small_b, &mut pool);
+    let ref_d = ref_a.sub(ref_b, &mut pool);
+
+    assert!(small_d.radius() >= ref_d.radius(),
+        "condensed difference {} is NARROWER than the exact {} -- unsound",
+        small_d.radius(), ref_d.radius());
+}
+
+#[test]
+fn condensation_stays_sound_across_a_consensus_sweep() {
+    // The same property, through the recurrence that actually found the bug:
+    // ring consensus with fresh noise each round, which forces heavy
+    // condensation, then a subtraction of two nodes.
+    for n in [3usize, 5, 8] {
+        for fresh in [false, true] {
+            let (small, _) = sweep_width::<8>(n, fresh);
+            let (exact, cond) = sweep_width::<256>(n, fresh);
+            assert_eq!(cond, 0, "the reference must not condense");
+            assert!(small >= exact,
+                "n={n} fresh={fresh}: capacity-8 width {small} is narrower than \
+                 the exact {exact} -- condensation must only widen");
+        }
+    }
+}
+
+fn sweep_width<const K: usize>(n: usize, fresh: bool) -> (i128, u32) {
+    use exact_band::Fixed;
+    let mut pool = Symbols::new();
+    let mut z: [Fixed<K>; 8] = core::array::from_fn(|i| {
+        if i < n { Fixed::new(Zono::<K>::from_symbol(1000, pool.fresh(), 12)) }
+        else { Fixed::new(Zono::<K>::exact(0)) }
+    });
+    for _ in 0..6 {
+        let prev = z;
+        for i in 0..n {
+            let mut v = prev[i].scale(2)
+                .add(prev[(i + n - 1) % n], &mut pool)
+                .add(prev[(i + 1) % n], &mut pool)
+                .div_pow2(2);
+            if fresh {
+                v = v.add(Fixed::new(Zono::<K>::uncertain(0, 2, &mut pool)), &mut pool);
+            }
+            z[i] = v;
+        }
+    }
+    let d = z[0].sub(z[1], &mut pool);
+    (1000 * d.width_scaled() / (1i128 << d.shift()), d.numerator().condensations())
+}
