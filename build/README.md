@@ -3,7 +3,12 @@
 Code written here that does **not** belong in this archive long-term. Each
 directory is a complete standalone project waiting for its own repository.
 
-**Start with [`h4-recheck/`](h4-recheck/README.md)** if you have read the
+**Start with [`PACKAGE-AUDIT.md`](PACKAGE-AUDIT.md)** if you have read the
+`quilt-quantum-research-complete` package: it audits all three of that package's
+surviving claims by executing them. One does not survive, one holds up, one is
+not checkable from the package as shipped.
+
+**Or go straight to [`h4-recheck/`](h4-recheck/README.md)** for the deep one, if you have read the
 `quilt-quantum-research-complete` package: its headline result — "the strongest
 measured result in the documentation set", 11.8×, accepted by all four of its
 judges — is an artifact of a harness that disabled one arm. Five defects, each
