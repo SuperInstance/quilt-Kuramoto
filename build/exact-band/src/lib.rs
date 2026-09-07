@@ -30,10 +30,12 @@ pub mod circular;
 pub mod covering;
 pub mod isqrt;
 pub mod lattice;
+pub mod zono;
 
 pub use boxed::IBox;
 pub use circular::{Heading, Phase};
 pub use lattice::{Hex, Lattice, Z1, Z2, Z3};
+pub use zono::{Symbols, Zono};
 
 /// An exact lattice value carrying an integer tolerance band.
 ///

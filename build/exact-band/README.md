@@ -161,3 +161,50 @@ published artifact rather than the repo.)*
 v0.1.0. The algebra and its tests are done. Not yet wired to `swarm-tminus` —
 that is the next step, and it is what makes the band drive *when things fire*
 rather than only what they mean.
+
+## Integer zonotopes — and where they lose
+
+`IBox` is interval arithmetic, so it cannot tell that two quantities share a
+source. The symptom is that `x - x` is not zero: for `x ∈ [9, 11]` it returns
+`[-2, 2]`, a two-wide band around an answer that is exactly `0` every time.
+
+[`zono`](src/zono.rs) fixes that with affine forms carrying **integer**
+coefficients over shared noise symbols. This crate previously stated that affine
+arithmetic "needs real-valued noise coefficients, i.e. floats, so it is
+deliberately out of scope". That was wrong and is now retracted: addition,
+subtraction and scaling are exact in `ℤ`, and division and multiplication stay
+sound by pushing their exact remainder into a fresh symbol, rounded up. Capacity
+is fixed (`Zono<K>`, terms stored inline) so it still needs no allocator.
+
+`cargo run --release --example zono_vs_box` measures both directions.
+
+**Where it wins, without bound.** A value added and removed again — an identity
+on the true value:
+
+| repetitions | true width | zonotope | box |
+|---|---|---|---|
+| 0 | 20 | 20 | 20 |
+| 3 | 20 | 20 | 140 |
+| 6 | 20 | 20 | 260 |
+
+The box grows by 40 every repetition, forever. It is never wrong, only useless.
+
+**Where it loses.** Ring consensus with integer division, 3 nodes, 8 steps:
+
+| step | true width | zonotope | box |
+|---|---|---|---|
+| 0 | 24 | 24 | **24** |
+| 4 | 24 | 40 | **24** |
+| 8 | 24 | 76 | **24** |
+
+The box is *exactly tight* here — a convex combination preserves interval width
+— and the zonotope is not. Each division's rounding must be charged as a fresh
+**independent** source, because affine arithmetic has no way to say "this error
+is a deterministic function of inputs I already track", so the charge cannot
+cancel and accumulates. Tightening the remainder bookkeeping from a flat unit
+per term to exact leftovers cut this from 270 to 76; it does not remove it.
+
+Both cases are pinned by tests, the losing one included, so the limitation
+cannot be quietly claimed away and a real fix shows up as a failure rather than
+going unnoticed. The fix is to stop dividing — carry a shared denominator and
+rescale rarely — which is identified, not yet built.

@@ -135,9 +135,19 @@ impl<const N: usize> IBox<N> {
 ///
 /// This is the interval-arithmetic rule, and it is **sound but not tight** — if
 /// the same uncertainty is counted along two paths it gets added twice (the
-/// classic dependency problem). An affine-arithmetic bound would be tighter but
-/// needs real-valued noise coefficients, i.e. floats, so it is deliberately out
-/// of scope.
+/// classic dependency problem).
+///
+/// An earlier version of this note claimed an affine-arithmetic bound "needs
+/// real-valued noise coefficients, i.e. floats, so it is deliberately out of
+/// scope". **That was wrong, and [`crate::zono`] is the retraction**: integer
+/// coefficients work, with division and multiplication staying sound by
+/// pushing their remainder into a fresh symbol rounded up.
+///
+/// Which to use is a measured question, not an obvious one. `Zono` wins without
+/// bound where a value is reused — the box grows by two widths per reuse while
+/// the truth does not move at all — and *loses* to this rule on
+/// division-heavy convex averaging, where interval arithmetic is already
+/// exactly tight. See `examples/zono_vs_box.rs` for both.
 impl<const N: usize> core::ops::Add for IBox<N> {
     type Output = Self;
     fn add(self, other: Self) -> Self {
