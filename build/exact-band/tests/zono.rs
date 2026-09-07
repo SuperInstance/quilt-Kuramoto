@@ -267,3 +267,95 @@ fn the_case_where_zonotopes_lose_is_pinned_too() {
         "but exact remainder accounting must keep it near {zono_width}, not the \
          270 the flat-unit charge produced");
 }
+
+// ---- Fixed: the scaled form that stops dividing ---------------------------
+
+type F = exact_band::Fixed<16>;
+use exact_band::Fixed;
+
+#[test]
+fn scaling_removes_the_rounding_that_made_zonotopes_lose() {
+    // The same ring consensus that Zono::div_round loses on. Carried as Fixed,
+    // the /4 is a change of exponent rather than a division, so nothing rounds
+    // and nothing is minted -- the width stays exactly true.
+    let mut pool = Symbols::new();
+    let syms: [u32; 3] = [pool.fresh(), pool.fresh(), pool.fresh()];
+    let mut z: [F; 3] =
+        core::array::from_fn(|i| Fixed::new(Z::from_symbol(1000, syms[i], 12)));
+    for _ in 0..8 {
+        let prev = z;
+        for i in 0..3 {
+            z[i] = prev[i].scale(2)
+                .add(prev[(i + 2) % 3], &mut pool)
+                .add(prev[(i + 1) % 3], &mut pool)
+                .div_pow2(2);
+        }
+    }
+    // Width in units of 2^-shift, compared against the true width of 24.
+    let den = 1i128 << z[0].shift();
+    assert_eq!(z[0].width_scaled(), 24 * den,
+        "a convex combination preserves width exactly; Fixed must report that");
+    assert_eq!(z[0].numerator().condensations(), 0, "and mint nothing on the way");
+}
+
+#[test]
+fn only_a_zonotope_can_conclude_that_two_nodes_agree() {
+    // The operation this crate exists for. After consensus, x0 - x1 collapses
+    // toward zero. Interval arithmetic cannot see it at any number of rounds.
+    let mut pool = Symbols::new();
+    let syms: [u32; 3] = [pool.fresh(), pool.fresh(), pool.fresh()];
+    let mut z: [F; 3] =
+        core::array::from_fn(|i| Fixed::new(Z::from_symbol(1000, syms[i], 12)));
+
+    let mut widths = [0i128; 10];
+    for w in widths.iter_mut() {
+        let d = z[0].sub(z[1], &mut pool);
+        // width as a fraction of a unit, in thousandths
+        *w = 1000 * d.width_scaled() / (1i128 << d.shift());
+        let prev = z;
+        for i in 0..3 {
+            z[i] = prev[i].scale(2)
+                .add(prev[(i + 2) % 3], &mut pool)
+                .add(prev[(i + 1) % 3], &mut pool)
+                .div_pow2(2);
+        }
+    }
+    assert_eq!(widths[0], 48000, "both start at the same place");
+    assert!(widths[3] < 1000, "the zonotope must collapse fast: {}", widths[3]);
+    assert_eq!(widths[8], 0, "and reach exact agreement");
+    // Monotone, because consensus never un-converges.
+    for t in 1..10 {
+        assert!(widths[t] <= widths[t - 1], "width must not grow at t={t}");
+    }
+
+    // The box, on the identical recurrence, carried without rounding.
+    let (mut blo, mut bhi) = ([988i128; 3], [1012i128; 3]);
+    let mut den = 1i128;
+    for _ in 0..10 {
+        let (plo, phi) = (blo, bhi);
+        for i in 0..3 {
+            blo[i] = 2 * plo[i] + plo[(i + 2) % 3] + plo[(i + 1) % 3];
+            bhi[i] = 2 * phi[i] + phi[(i + 2) % 3] + phi[(i + 1) % 3];
+        }
+        den *= 4;
+    }
+    let box_width = 1000 * ((bhi[0] - blo[0]) + (bhi[1] - blo[1])) / den;
+    assert_eq!(box_width, 48000,
+        "interval arithmetic cannot conclude agreement at ANY number of rounds");
+}
+
+#[test]
+fn rescaling_is_sound_and_is_the_only_place_fixed_loses_tightness() {
+    let mut pool = Symbols::new();
+    let s = pool.fresh();
+    let f = Fixed::new(Z::from_symbol(1000, s, 12)).div_pow2(6);
+    assert_eq!(f.numerator().condensations(), 0, "div_pow2 mints nothing");
+
+    // Rescaling down rounds once, and must widen rather than narrow.
+    let before = f.interval();
+    let after = f.rescale(0, &mut pool).interval();
+    assert!(after.0 <= before.0 && after.1 >= before.1,
+        "rescale must never narrow: {before:?} -> {after:?}");
+    assert!(f.rescale(0, &mut pool).numerator().condensations() > 0,
+        "and it is the one place a charge is minted");
+}

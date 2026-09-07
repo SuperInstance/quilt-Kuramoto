@@ -35,7 +35,7 @@ pub mod zono;
 pub use boxed::IBox;
 pub use circular::{Heading, Phase};
 pub use lattice::{Hex, Lattice, Z1, Z2, Z3};
-pub use zono::{Symbols, Zono};
+pub use zono::{Fixed, Symbols, Zono};
 
 /// An exact lattice value carrying an integer tolerance band.
 ///

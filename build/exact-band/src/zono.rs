@@ -385,3 +385,115 @@ fn div_nearest(n: i64, d: i64) -> i64 {
             else { -((-2 * n128 + d128) / (2 * d128)) };
     clamp_i64(q)
 }
+
+/// A zonotope carried at a binary scale: the value is `z / 2ᶠ`.
+///
+/// [`Zono::div_round`] mints a fresh noise symbol every time it is called,
+/// because integer division genuinely loses information and affine arithmetic
+/// has no way to say "this error is a deterministic function of inputs I
+/// already track". In a loop that divides every step, those charges never
+/// cancel and the band creeps — measurably: see `examples/zono_vs_box.rs`,
+/// where plain interval arithmetic beats a dividing zonotope outright.
+///
+/// The fix is to stop dividing. Dividing by a power of two becomes a change of
+/// scale — [`Fixed::div_pow2`] increments an exponent and touches no
+/// coefficient — so it is **exact, and mints nothing**. Rounding happens once,
+/// at [`Fixed::rescale`], when the coefficients are about to get large, instead
+/// of once per step.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct Fixed<const K: usize> {
+    z: Zono<K>,
+    shift: u32,
+}
+
+impl<const K: usize> Fixed<K> {
+    /// A value at scale zero — an ordinary integer zonotope.
+    pub const fn new(z: Zono<K>) -> Self { Self { z, shift: 0 } }
+
+    /// The underlying numerator form.
+    pub const fn numerator(&self) -> &Zono<K> { &self.z }
+
+    /// The binary exponent: the value is `numerator / 2^shift`.
+    pub const fn shift(&self) -> u32 { self.shift }
+
+    /// Divide by `2^k`, **exactly**. No rounding, no new symbol.
+    pub const fn div_pow2(mut self, k: u32) -> Self {
+        self.shift += k;
+        self
+    }
+
+    /// Multiply by an exact integer.
+    pub fn scale(mut self, k: i64) -> Self {
+        self.z = self.z.scale(k);
+        self
+    }
+
+    /// Largest magnitude anywhere in the form — the overflow early-warning.
+    pub fn max_magnitude(&self) -> i128 {
+        let mut m = (self.z.center as i128).abs();
+        let mut i = 0;
+        while i < self.z.len {
+            let c = (self.z.coeffs[i] as i128).abs();
+            if c > m { m = c; }
+            i += 1;
+        }
+        m
+    }
+
+    /// Bring both operands to a common scale by raising the smaller.
+    ///
+    /// Raising is exact (a multiplication); it is lowering that would round, so
+    /// this never rounds. The caller keeps magnitudes in range with
+    /// [`Fixed::rescale`].
+    fn aligned(self, other: Self) -> (Zono<K>, Zono<K>, u32) {
+        let s = if self.shift > other.shift { self.shift } else { other.shift };
+        let a = if self.shift < s { self.z.scale(1i64 << (s - self.shift)) } else { self.z };
+        let b = if other.shift < s { other.z.scale(1i64 << (s - other.shift)) } else { other.z };
+        (a, b, s)
+    }
+
+    /// Exact sum.
+    pub fn add(self, other: Self, pool: &mut Symbols) -> Self {
+        let (a, b, s) = self.aligned(other);
+        Self { z: a.add(b, pool), shift: s }
+    }
+
+    /// Exact difference — the operation that decides whether two estimates
+    /// have converged, and the one interval arithmetic cannot answer.
+    pub fn sub(self, other: Self, pool: &mut Symbols) -> Self {
+        let (a, b, s) = self.aligned(other);
+        Self { z: a.sub(b, pool), shift: s }
+    }
+
+    /// Drop the scale back to `target`, rounding once with full remainder
+    /// accounting. This is the only place a `Fixed` loses tightness.
+    pub fn rescale(self, target: u32, pool: &mut Symbols) -> Self {
+        if target >= self.shift { return self; }
+        let d = 1i64 << (self.shift - target);
+        Self { z: self.z.div_round(d, pool), shift: target }
+    }
+
+    /// The interval the value denotes, rounded **outward** so it never
+    /// understates: the low end floors, the high end ceilings.
+    pub fn interval(&self) -> (i64, i64) {
+        let r = self.z.radius();
+        let d = 1i128 << self.shift;
+        let lo = self.z.center as i128 - r;
+        let hi = self.z.center as i128 + r;
+        (clamp_i64(div_floor(lo, d)), clamp_i64(div_ceil(hi, d)))
+    }
+
+    /// Total width of that interval, in units of `2^-shift`, without rounding —
+    /// the honest number to compare against a true width.
+    pub fn width_scaled(&self) -> i128 { 2 * self.z.radius() }
+}
+
+fn div_floor(n: i128, d: i128) -> i128 {
+    let q = n / d;
+    if n % d != 0 && (n < 0) != (d < 0) { q - 1 } else { q }
+}
+
+fn div_ceil(n: i128, d: i128) -> i128 {
+    let q = n / d;
+    if n % d != 0 && (n < 0) == (d < 0) { q + 1 } else { q }
+}

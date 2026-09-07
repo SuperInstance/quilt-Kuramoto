@@ -206,5 +206,35 @@ per term to exact leftovers cut this from 270 to 76; it does not remove it.
 
 Both cases are pinned by tests, the losing one included, so the limitation
 cannot be quietly claimed away and a real fix shows up as a failure rather than
-going unnoticed. The fix is to stop dividing — carry a shared denominator and
-rescale rarely — which is identified, not yet built.
+going unnoticed.
+
+### The fix: stop dividing
+
+`Fixed<K>` carries the form at a binary scale, so dividing by a power of two is
+a change of exponent — it touches no coefficient, rounds nothing, and mints no
+symbol. Rounding happens once, at an explicit `rescale`, instead of once per
+step. On the losing benchmark above that restores the zonotope to **exactly the
+true width, 24**, with zero condensations.
+
+### What that buys: concluding that two nodes agree
+
+`cargo run --release --example agreement` asks the question this crate exists
+for. Run consensus on a ring, then enclose `x₀ − x₁` — the disagreement between
+two nodes. Widths in thousandths of a unit:
+
+| rounds | true | zonotope | box |
+|---|---|---|---|
+| 0 | 48000 | 48000 | 48000 |
+| 2 | 3000 | **3000** | 48000 |
+| 4 | 187 | **187** | 48000 |
+| 6 | 11 | **11** | 48000 |
+| 8 | **0** | **0** | 48000 |
+
+The zonotope tracks the true width **exactly at every round**, to zero. The box
+never narrows — interval arithmetic has no way to know that `x₀` and `x₁` are
+built from the same three readings, so it must assume they are extreme in
+opposite directions, forever.
+
+It is never wrong. It simply **cannot conclude that the nodes agree** — at any
+number of rounds, for any tolerance below 48. That is the operation this crate
+is for, and it is the one interval arithmetic cannot do.
