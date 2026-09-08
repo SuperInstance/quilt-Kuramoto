@@ -35,7 +35,9 @@ def solve(solver, timeout_ms=60000, label=""):
         return "unknown", elapsed, None
 
 
-def report(name, status, elapsed, model, interpret_sat, bound_desc):
+def report(name, status, elapsed, model, interpret_sat, bound_desc,
+           unsat_msg="EQUIVALENT over the checked domain (UNSAT -- no counterexample exists)",
+           sat_msg="DIVERGENCE FOUND (SAT -- counterexample below)"):
     """Print one function's verdict in the fixed, honest format this repo's
     discipline requires: what was checked, over what range, how long it took,
     and (if sat) the actual counterexample values."""
@@ -43,9 +45,9 @@ def report(name, status, elapsed, model, interpret_sat, bound_desc):
     print(f"  domain checked : {bound_desc}")
     print(f"  solver time    : {elapsed:.3f}s")
     if status == "unsat":
-        print(f"  RESULT: EQUIVALENT over the checked domain (UNSAT -- no counterexample exists)")
+        print(f"  RESULT: {unsat_msg}")
     elif status == "sat":
-        print(f"  RESULT: DIVERGENCE FOUND (SAT -- counterexample below)")
+        print(f"  RESULT: {sat_msg}")
         interpret_sat(model)
     else:
         print(f"  RESULT: UNKNOWN -- solver timed out or gave up. This is a result,")

@@ -98,12 +98,18 @@ def unrolled_isqrt(n, width, unroll):
         shifted = z3.LShR(shifted, one)
     # x0 = 2^ceil(bits/2)
     half = z3.LShR(bits + one, one)  # (bits + 1) / 2, unsigned shift
-    x = z3.If(n < 2, n, z3.LShR(one << half, zero))  # placeholder; fixed below
     x = one << half
-    x = z3.If(n < 2, n, x)
+    # CAUTION (found and fixed by this script's own self-check): n, x, y are
+    # all UNSIGNED (uint64_t / u128) quantities, but z3py's `<`/`<=`/`>`/`>=`
+    # operators on BitVecs default to SIGNED comparison. `n < 2` would treat
+    # any n with the top bit set as negative and wrongly early-return n for
+    # roughly half the domain. Every magnitude comparison here must be the
+    # explicit unsigned form (ULT/UGE/etc), never Python's bare operators.
+    n_lt_2 = z3.ULT(n, z3.BitVecVal(2, width))
+    x = z3.If(n_lt_2, n, x)
 
-    converged = (n < 2)  # n<2 returns immediately in the source, y>=x check never runs
-    result = z3.If(n < 2, n, x)
+    converged = n_lt_2  # n<2 returns immediately in the source, y>=x check never runs
+    result = z3.If(n_lt_2, n, x)
 
     cur_x = x
     for _ in range(unroll):
@@ -117,22 +123,32 @@ def unrolled_isqrt(n, width, unroll):
     return result, converged
 
 
-def build_equivalence_solver(n_bits, unroll, val_limit_bits):
-    """n modelled at n_bits width for BOTH sides (C's own width, since the
-    Rust side's input is restricted to the C-representable subrange -- see
-    docstring). val_limit_bits optionally narrows the search further within
-    that width for speed."""
-    n = z3.BitVec("n", n_bits)
+def build_equivalence_solver(c_bits, rust_extra_bits, unroll, val_limit_bits):
+    """n modelled at c_bits width (eb_isqrt's real native width when
+    c_bits=64; a smaller demo width otherwise -- see README for why 64 is
+    not the default). The Rust side zero-extends the SAME n into a
+    (c_bits + rust_extra_bits)-wide vector and runs the identical algorithm
+    entirely at that wider width (matching u128's real behaviour relative to
+    u64 when c_bits=64, rust_extra_bits=64) -- this is the genuine
+    cross-width check the docstring describes, not one model compared to
+    itself. val_limit_bits optionally narrows the search further for speed."""
+    n_c = z3.BitVec("n", c_bits)
     s = z3.Solver()
-    if val_limit_bits < n_bits:
-        s.add(z3.ULT(n, z3.BitVecVal(1 << val_limit_bits, n_bits)))
-    c_result, c_conv = unrolled_isqrt(n, n_bits, unroll)
-    rust_result, rust_conv = unrolled_isqrt(n, n_bits, unroll)  # same algorithm, same width restriction (see docstring)
-    # Only compare where the source's actual loop would have returned
-    # (converged) on THIS unroll depth for both -- see --check-convergence
-    # for whether that's every n in the domain.
+    if val_limit_bits < c_bits:
+        s.add(z3.ULT(n_c, z3.BitVecVal(1 << val_limit_bits, c_bits)))
+
+    rust_bits = c_bits + rust_extra_bits
+    n_rust = z3.ZeroExt(rust_extra_bits, n_c)
+
+    c_result, c_conv = unrolled_isqrt(n_c, c_bits, unroll)
+    rust_result_wide, rust_conv = unrolled_isqrt(n_rust, rust_bits, unroll)
+    # isqrt(n) always fits in c_bits/2 bits (it's <= sqrt(n) < 2^(c_bits/2)
+    # <= 2^c_bits), so truncating the wide Rust result back to c_bits for
+    # comparison loses no information when there truly is no divergence.
+    rust_result = z3.Extract(c_bits - 1, 0, rust_result_wide)
+
     s.add(z3.And(c_conv, rust_conv), c_result != rust_result)
-    return s, n
+    return s, n_c
 
 
 def build_convergence_solver(n_bits, unroll, val_limit_bits):
@@ -147,7 +163,8 @@ def build_convergence_solver(n_bits, unroll, val_limit_bits):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--width", type=int, default=16, help="bitvector width to model n at (default 16 -- see README for why 64 is not attempted by default)")
+    ap.add_argument("--width", type=int, default=16, help="C-side (native) bitvector width to model n at (default 16 -- see README for why 64 is not attempted by default)")
+    ap.add_argument("--rust-extra-bits", type=int, default=16, help="how much WIDER the Rust side's working width is than --width (default 16, e.g. width=16+extra=16 models a 16-bit-native-C vs 32-bit-native-Rust comparison; the real crates are 64 vs 128, i.e. extra=64)")
     ap.add_argument("--unroll", type=int, default=12, help="Newton loop unroll depth (default 12)")
     ap.add_argument("--val-limit-bits", type=int, default=None, help="further restrict n < 2^val_limit_bits within --width (default: full width)")
     ap.add_argument("--check-convergence", action="store_true", help="instead of the equivalence check, ask whether any n fails to converge within --unroll steps")
@@ -168,7 +185,9 @@ def main():
             print(f"    (this means the equivalence verdict says nothing about this n)")
 
         bound_desc = f"n in [0, 2^{val_limit}-1] at width {width}, unroll depth {args.unroll}"
-        verdict = report(label, status, elapsed, model, interpret, bound_desc)
+        verdict = report(label, status, elapsed, model, interpret, bound_desc,
+                          unsat_msg="CONVERGES within the unroll depth for every n checked (UNSAT -- no non-converging n exists)",
+                          sat_msg="NON-CONVERGENCE FOUND (SAT -- some n does not converge in time)")
         if status == "unsat":
             print(f"\n  CONVERGENCE CONFIRMED: every n in this domain converges within")
             print(f"  {args.unroll} iterations. The equivalence check at the same --width/--unroll")
@@ -176,19 +195,22 @@ def main():
             print(f"  inputs that happened to converge.")
         return 0 if status == "unsat" else (1 if status == "sat" else 3)
 
-    label = f"eb_isqrt vs isqrt (width={width}, unroll={args.unroll})"
-    s, n = build_equivalence_solver(width, args.unroll, val_limit)
+    rust_bits = width + args.rust_extra_bits
+    label = f"eb_isqrt (u{width}) vs isqrt (u{rust_bits}), unroll={args.unroll}"
+    s, n = build_equivalence_solver(width, args.rust_extra_bits, args.unroll, val_limit)
     status, elapsed, model = solve(s, timeout_ms=args.timeout_ms, label=label)
 
     def interpret(m):
         n_v = m[n].as_long()
-        r, conv = unrolled_isqrt(z3.BitVecVal(n_v, width), width, args.unroll)
-        r_v = z3.simplify(r).as_long()
+        c_r, _ = unrolled_isqrt(z3.BitVecVal(n_v, width), width, args.unroll)
+        rust_r, _ = unrolled_isqrt(z3.BitVecVal(n_v, rust_bits), rust_bits, args.unroll)
+        c_v = z3.simplify(c_r).as_long()
+        rust_v = z3.simplify(rust_r).as_long()
         print(f"    n = {n_v}")
-        print(f"    C   eb_isqrt(n)   = {r_v} (as modelled)")
-        print(f"    Rust isqrt(n)     = (same model instance was compared against itself -- see README)")
+        print(f"    C   eb_isqrt(n)  [native u{width}]  = {c_v}")
+        print(f"    Rust isqrt(n)    [native u{rust_bits}] = {rust_v}")
 
-    bound_desc = f"n in [0, 2^{val_limit}-1] at width {width}, {args.unroll}-step unrolled Newton loop"
+    bound_desc = f"n in [0, 2^{val_limit}-1], C at native u{width}, Rust at native u{rust_bits}, {args.unroll}-step unrolled Newton loop"
     verdict = report(label, status, elapsed, model, interpret, bound_desc)
     if verdict == "unsat":
         print(f"\n  NOTE: this only covers n for which the {args.unroll}-step unroll actually")
