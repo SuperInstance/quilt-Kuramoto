@@ -30,6 +30,7 @@
 #ifndef EXACT_BAND_H
 #define EXACT_BAND_H
 
+#include <stddef.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -302,6 +303,48 @@ void eb_fixed_rescale(eb_fixed_t *out, const eb_fixed_t *a, uint32_t target,
                       eb_symbols_t *pool);
 /** Total width in units of 2^-shift: 2 * radius. */
 int64_t eb_fixed_width_scaled(const eb_fixed_t *f);
+
+
+/* ---- Canonical wire encoding ---------------------------------------------
+ *
+ * Bijective on the value space: every value has exactly one valid encoding and
+ * the decoder REJECTS everything else. That is what makes hashing the bytes
+ * equivalent to hashing the value -- a format where two byte strings can mean
+ * the same thing cannot carry provenance, because two honest parties would
+ * compute different digests for one measurement.
+ *
+ * Symbol ids are delta-encoded as `id - prev - 1`, so the smallest legal step
+ * is +1 and a descending or repeated id HAS NO BYTE STRING AT ALL. Ordering is
+ * a property of the format, not a rule someone must remember to check.
+ *
+ * See ../WIRE-FORMAT.md. The Rust and Python ports must produce identical bytes.
+ */
+
+typedef enum {
+    EB_WIRE_OK = 0,
+    EB_WIRE_TRUNCATED,
+    EB_WIRE_NON_MINIMAL_VARINT,
+    EB_WIRE_OVERFLOW,
+    EB_WIRE_BAD_TAG,
+    EB_WIRE_TERMS_NOT_ASCENDING,
+    EB_WIRE_ZERO_COEFFICIENT,
+    EB_WIRE_TOO_MANY_TERMS,
+    EB_WIRE_TRAILING_BYTES
+} eb_wire_err_t;
+
+typedef struct { uint8_t *buf; size_t cap; size_t len; } eb_writer_t;
+typedef struct { const uint8_t *buf; size_t len; size_t pos; } eb_reader_t;
+
+void eb_writer_init(eb_writer_t *w, uint8_t *buf, size_t cap);
+void eb_reader_init(eb_reader_t *r, const uint8_t *buf, size_t len);
+/** Error unless every byte was consumed -- trailing data is not canonical. */
+eb_wire_err_t eb_reader_finish(const eb_reader_t *r);
+
+eb_wire_err_t eb_wire_write_banded(eb_writer_t *w, eb_banded_t b);
+eb_wire_err_t eb_wire_read_banded(eb_reader_t *r, eb_banded_t *out);
+eb_wire_err_t eb_wire_write_zono(eb_writer_t *w, const eb_zono_t *z);
+eb_wire_err_t eb_wire_read_zono(eb_reader_t *r, eb_zono_t *out,
+                                eb_symbols_t *pool);
 
 #ifdef __cplusplus
 }

@@ -289,6 +289,86 @@ static void run_agreement(unsigned long rounds)
     printf("\n");
 }
 
+
+/* ---- canonical wire vectors ---------------------------------------------
+ * Same fixed value set as the Rust and Python emitters. If the bytes differ
+ * anywhere, the format has more than one opinion about what canonical means
+ * and is therefore not canonical.
+ */
+static void put_hex(const uint8_t *b, size_t n)
+{
+    size_t i;
+    for (i = 0; i < n; i++) { printf("%02x", b[i]); }
+    printf("\n");
+}
+
+static void wire_banded(const char *name, int32_t v, uint32_t r)
+{
+    uint8_t buf[64];
+    eb_writer_t w;
+    eb_banded_t b;
+    b.value = v; b.radius = r;
+    eb_writer_init(&w, buf, sizeof buf);
+    if (eb_wire_write_banded(&w, b) != EB_WIRE_OK) { printf("%s ENCODE-FAILED\n", name); return; }
+    printf("%s ", name);
+    put_hex(buf, w.len);
+}
+
+static void wire_zono(const char *name, const eb_zono_t *z)
+{
+    uint8_t buf[512];
+    eb_writer_t w;
+    eb_writer_init(&w, buf, sizeof buf);
+    if (eb_wire_write_zono(&w, z) != EB_WIRE_OK) { printf("%s ENCODE-FAILED\n", name); return; }
+    printf("%s ", name);
+    put_hex(buf, w.len);
+}
+
+static void run_wire(void)
+{
+    eb_symbols_t pool;
+    eb_zono_t z, t, acc;
+    uint32_t k;
+    int i;
+
+    eb_symbols_init(&pool);
+
+    wire_banded("banded/zero", 0, 0u);
+    wire_banded("banded/neg-one", -1, 1u);
+    wire_banded("banded/small", 127, 255u);
+    wire_banded("banded/neg-small", -128, 256u);
+    wire_banded("banded/i32-min", (int32_t)(-2147483647 - 1), 0u);
+    wire_banded("banded/i32-max", 2147483647, 4294967295u);
+
+    eb_zono_exact(&z, 0);           wire_zono("zono/exact", &z);
+    eb_zono_exact(&z, -123456789);  wire_zono("zono/exact-neg", &z);
+    eb_zono_from_symbol(&z, 1000, 7u, 12); wire_zono("zono/one-term", &z);
+
+    eb_zono_exact(&acc, -5);
+    for (i = 1; i <= 5; i++) {
+        eb_zono_from_symbol(&t, 0, (uint32_t)i, (int64_t)i * 100 * ((i % 2 == 0) ? -1 : 1));
+        eb_zono_add(&acc, &acc, &t, &pool);
+    }
+    wire_zono("zono/consecutive", &acc);
+
+    {
+        static const uint32_t ids[4] = { 1u, 1000u, 70000u, 4000000000u };
+        eb_zono_exact(&acc, 7);
+        for (i = 0; i < 4; i++) {
+            eb_zono_from_symbol(&t, 0, ids[i], (int64_t)(ids[i] % 977u) + 1);
+            eb_zono_add(&acc, &acc, &t, &pool);
+        }
+        wire_zono("zono/sparse", &acc);
+    }
+
+    eb_zono_exact(&acc, 1);
+    for (k = 1u; k <= 16u; k++) {
+        eb_zono_from_symbol(&t, 0, k * 3u, (int64_t)k - 8);
+        eb_zono_add(&acc, &acc, &t, &pool);
+    }
+    wire_zono("zono/full", &acc);
+}
+
 int main(int argc, char **argv)
 {
     unsigned long iters = 200000ul;
@@ -297,6 +377,10 @@ int main(int argc, char **argv)
 
     if (argc > 1) {
         iters = strtoul(argv[1], 0, 10);
+    }
+    if (argc > 1 && strcmp(argv[1], "--wire") == 0) {
+        run_wire();
+        return 0;
     }
     if (argc > 2 && strcmp(argv[2], "--agree") == 0) {
         run_agreement(iters);

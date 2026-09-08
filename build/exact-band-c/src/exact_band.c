@@ -682,3 +682,188 @@ void eb_fixed_rescale(eb_fixed_t *out, const eb_fixed_t *a, uint32_t target,
     out->z = r;
     out->shift = target;
 }
+
+/* ---- Canonical wire encoding --------------------------------------------- */
+
+#define EB_TAG_BANDED 0x01
+#define EB_TAG_ZONO   0x10
+
+void eb_writer_init(eb_writer_t *w, uint8_t *buf, size_t cap)
+{
+    w->buf = buf; w->cap = cap; w->len = 0u;
+}
+
+void eb_reader_init(eb_reader_t *r, const uint8_t *buf, size_t len)
+{
+    r->buf = buf; r->len = len; r->pos = 0u;
+}
+
+eb_wire_err_t eb_reader_finish(const eb_reader_t *r)
+{
+    return (r->pos == r->len) ? EB_WIRE_OK : EB_WIRE_TRAILING_BYTES;
+}
+
+static eb_wire_err_t w_byte(eb_writer_t *w, uint8_t b)
+{
+    if (w->len >= w->cap) { return EB_WIRE_TRUNCATED; }
+    w->buf[w->len++] = b;
+    return EB_WIRE_OK;
+}
+
+/* LEB128, minimally encoded by construction. */
+static eb_wire_err_t w_varint(eb_writer_t *w, uint64_t v)
+{
+    for (;;) {
+        uint8_t byte = (uint8_t)(v & 0x7Fu);
+        eb_wire_err_t e;
+        v >>= 7;
+        if (v == 0u) { return w_byte(w, byte); }
+        e = w_byte(w, (uint8_t)(byte | 0x80u));
+        if (e != EB_WIRE_OK) { return e; }
+    }
+}
+
+/* Zigzag, so -1 costs one byte rather than ten. The arithmetic shift of a
+ * negative value is implementation-defined in C89 but well-defined as sign
+ * extension in every compiler this targets; written via a division-free form
+ * so the intent is explicit. */
+static eb_wire_err_t w_signed(eb_writer_t *w, int64_t v)
+{
+    uint64_t z = ((uint64_t)v << 1) ^ (uint64_t)(v >> 63);
+    return w_varint(w, z);
+}
+
+static eb_wire_err_t r_byte(eb_reader_t *r, uint8_t *out)
+{
+    if (r->pos >= r->len) { return EB_WIRE_TRUNCATED; }
+    *out = r->buf[r->pos++];
+    return EB_WIRE_OK;
+}
+
+static eb_wire_err_t r_varint(eb_reader_t *r, uint64_t *out)
+{
+    uint64_t acc = 0u;
+    unsigned shift = 0u;
+    for (;;) {
+        uint8_t b;
+        uint64_t payload;
+        eb_wire_err_t e = r_byte(r, &b);
+        if (e != EB_WIRE_OK) { return e; }
+        if (shift >= 64u) { return EB_WIRE_OVERFLOW; }
+        payload = (uint64_t)(b & 0x7Fu);
+        if (shift == 63u && payload > 1u) { return EB_WIRE_OVERFLOW; }
+        acc |= payload << shift;
+        if ((b & 0x80u) == 0u) {
+            /* A continuation contributing nothing means a shorter encoding
+             * existed, so this one is not canonical. */
+            if (b == 0u && shift != 0u) { return EB_WIRE_NON_MINIMAL_VARINT; }
+            *out = acc;
+            return EB_WIRE_OK;
+        }
+        shift += 7u;
+    }
+}
+
+static eb_wire_err_t r_signed(eb_reader_t *r, int64_t *out)
+{
+    uint64_t u;
+    eb_wire_err_t e = r_varint(r, &u);
+    if (e != EB_WIRE_OK) { return e; }
+    *out = (int64_t)(u >> 1) ^ -(int64_t)(u & 1u);
+    return EB_WIRE_OK;
+}
+
+eb_wire_err_t eb_wire_write_banded(eb_writer_t *w, eb_banded_t b)
+{
+    eb_wire_err_t e = w_byte(w, EB_TAG_BANDED);
+    if (e != EB_WIRE_OK) { return e; }
+    e = w_signed(w, (int64_t)b.value);
+    if (e != EB_WIRE_OK) { return e; }
+    return w_varint(w, (uint64_t)b.radius);
+}
+
+eb_wire_err_t eb_wire_read_banded(eb_reader_t *r, eb_banded_t *out)
+{
+    uint8_t tag;
+    int64_t value;
+    uint64_t radius;
+    eb_wire_err_t e = r_byte(r, &tag);
+    if (e != EB_WIRE_OK) { return e; }
+    if (tag != EB_TAG_BANDED) { return EB_WIRE_BAD_TAG; }
+    e = r_signed(r, &value);
+    if (e != EB_WIRE_OK) { return e; }
+    e = r_varint(r, &radius);
+    if (e != EB_WIRE_OK) { return e; }
+    if (radius > 0xFFFFFFFFu) { return EB_WIRE_OVERFLOW; }
+    if (value < (-2147483647LL - 1) || value > 2147483647LL) {
+        return EB_WIRE_OVERFLOW;
+    }
+    out->value = (int32_t)value;
+    out->radius = (uint32_t)radius;
+    return EB_WIRE_OK;
+}
+
+eb_wire_err_t eb_wire_write_zono(eb_writer_t *w, const eb_zono_t *z)
+{
+    uint64_t prev = 0u;
+    uint32_t i;
+    eb_wire_err_t e = w_byte(w, EB_TAG_ZONO);
+    if (e != EB_WIRE_OK) { return e; }
+    e = w_signed(w, z->center);
+    if (e != EB_WIRE_OK) { return e; }
+    e = w_varint(w, (uint64_t)z->len);
+    if (e != EB_WIRE_OK) { return e; }
+    for (i = 0u; i < z->len; i++) {
+        uint64_t id = (uint64_t)z->ids[i];
+        if (z->coeffs[i] == 0) { return EB_WIRE_ZERO_COEFFICIENT; }
+        if (i > 0u && id <= prev) { return EB_WIRE_TERMS_NOT_ASCENDING; }
+        e = w_varint(w, (i == 0u) ? id : (id - prev - 1u));
+        if (e != EB_WIRE_OK) { return e; }
+        e = w_signed(w, z->coeffs[i]);
+        if (e != EB_WIRE_OK) { return e; }
+        prev = id;
+    }
+    return EB_WIRE_OK;
+}
+
+eb_wire_err_t eb_wire_read_zono(eb_reader_t *r, eb_zono_t *out,
+                                eb_symbols_t *pool)
+{
+    uint8_t tag;
+    int64_t center;
+    uint64_t n, prev = 0u, i;
+    eb_wire_err_t e = r_byte(r, &tag);
+    if (e != EB_WIRE_OK) { return e; }
+    if (tag != EB_TAG_ZONO) { return EB_WIRE_BAD_TAG; }
+    e = r_signed(r, &center);
+    if (e != EB_WIRE_OK) { return e; }
+    e = r_varint(r, &n);
+    if (e != EB_WIRE_OK) { return e; }
+    if (n > (uint64_t)EB_ZONO_CAP) { return EB_WIRE_TOO_MANY_TERMS; }
+
+    eb_zono_exact(out, center);
+    for (i = 0u; i < n; i++) {
+        uint64_t raw, id;
+        int64_t c;
+        e = r_varint(r, &raw);
+        if (e != EB_WIRE_OK) { return e; }
+        if (i == 0u) {
+            id = raw;
+        } else {
+            if (raw > UINT64_MAX - prev - 1u) { return EB_WIRE_OVERFLOW; }
+            id = raw + prev + 1u;
+        }
+        if (id > 0xFFFFFFFFu) { return EB_WIRE_OVERFLOW; }
+        e = r_signed(r, &c);
+        if (e != EB_WIRE_OK) { return e; }
+        if (c == 0) { return EB_WIRE_ZERO_COEFFICIENT; }
+        out->ids[out->len] = (uint32_t)id;
+        out->coeffs[out->len] = c;
+        out->len++;
+        prev = id;
+    }
+    /* Any id seen here must never be minted again: a collision would assert a
+     * dependency that does not exist and could make a later band too narrow. */
+    while (pool->next < (uint32_t)prev) { (void)eb_symbols_fresh(pool); }
+    return EB_WIRE_OK;
+}

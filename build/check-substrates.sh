@@ -138,6 +138,29 @@ check_zono "C" "$ZONO_ITERS" \
 check_zono "Python" "$ZONO_PY_ITERS" \
     "$(python3 stream_py.py "$ZONO_PY_ITERS" --zono)"
 
+say "canonical wire format: do all three emit the same BYTES?"
+# WIRE-FORMAT.md claims the encoding is bijective on the value space, so that
+# hashing bytes equals hashing values. A format verified in ONE substrate is a
+# format with one opinion about what canonical means.
+w_rs=$(cd exact-band && cargo run --quiet --release --example wire_vectors)
+w_c=$(cd exact-band-c && ./build/stream --wire)
+w_py=$(python3 wire_check.py)
+if [ "$w_rs" != "$w_c" ] || [ "$w_rs" != "$w_py" ]; then
+    echo "FAIL: the canonical encoding differs between substrates" >&2
+    printf '%s\n' "$w_rs" > /tmp/w_rs.$$; printf '%s\n' "$w_c" > /tmp/w_c.$$
+    printf '%s\n' "$w_py" > /tmp/w_py.$$
+    diff /tmp/w_rs.$$ /tmp/w_c.$$  >&2 || true
+    diff /tmp/w_rs.$$ /tmp/w_py.$$ >&2 || true
+    rm -f /tmp/w_rs.$$ /tmp/w_c.$$ /tmp/w_py.$$
+    exit 1
+fi
+n_wire=$(printf '%s\n' "$w_rs" | wc -l | tr -d ' ')
+if [ "$n_wire" -lt 12 ]; then
+    echo "FAIL: expected at least 12 wire vectors, got $n_wire" >&2
+    exit 1
+fi
+echo "  ok  Rust, C and Python emit identical bytes on $n_wire vectors"
+
 say "quilt cell state hash: three references, one corpus"
 # Several ports advertise a byte-exact badge for a hash their source never
 # computes. This is the corpus that would make such a claim checkable, held to

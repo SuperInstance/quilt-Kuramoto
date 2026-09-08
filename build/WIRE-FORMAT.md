@@ -69,8 +69,28 @@ Two tests carry the real property:
   — the one failure mode that matters here, and the one a real bug in
   condensation already produced once.
 
+## Three substrates, identical bytes
+
+A canonical format verified in one substrate is a format with one opinion about
+what canonical means. All three now emit **byte-identical** encodings for a
+fixed value set — including the `i32`/`u32` extremes, consecutive symbol ids
+(the zero-delta case), sparse ids up to 4 000 000 000 (large deltas), and a
+full-capacity form where a zero coefficient is *dropped rather than encoded*:
+
+```
+banded/i32-max    01feffffff0fffffffff0f
+zono/consecutive  10090501c801008f0300d804009f0600e807
+zono/sparse       100e040104e60730879b04f4098fada8f30eb80c
+```
+
+`check-substrates.sh` compares all twelve and fails on any difference. Breaking
+C's zigzag to a plain cast makes it diverge on the first negative value, which
+is the control.
+
 ## Status
 
-Rust only, so far. The C and Python ports and a wire section in the conformance
-stream are the next step — a canonical format verified in one substrate is a
-format with one opinion about what canonical means.
+Encode and decode in Rust, C99 and Python. A `Fixed`-scale encoding (carrying
+the binary exponent alongside the form) is not yet specified — the current
+format encodes a `Zono`, so a `Fixed` must be written as its numerator plus a
+separately-agreed shift. That is a gap, and naming it here is cheaper than
+discovering it at an interface.
