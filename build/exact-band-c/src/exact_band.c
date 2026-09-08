@@ -385,3 +385,235 @@ int64_t eb_phase_offset(uint32_t n, int64_t a, int64_t b)
     }
     return d;
 }
+
+/* ---- Zonotopes ----------------------------------------------------------- */
+
+/* Round-half-away-from-zero. Symmetric, so a sign flip in the input produces a
+ * sign flip in the output. A floor would bias one direction over many steps --
+ * the bug this repository already fixed once in the phase-lock centre pull. */
+int64_t eb_div_nearest(int64_t n, int64_t d)
+{
+    if (n >= 0) { return (2 * n + d) / (2 * d); }
+    return -((-2 * n + d) / (2 * d));
+}
+
+
+void eb_symbols_init(eb_symbols_t *p) { p->next = 0u; }
+
+uint32_t eb_symbols_fresh(eb_symbols_t *p)
+{
+    p->next += 1u;
+    return p->next;
+}
+
+void eb_zono_exact(eb_zono_t *z, int64_t center)
+{
+    z->center = center;
+    z->len = 0u;
+    z->condensations = 0u;
+}
+
+void eb_zono_from_symbol(eb_zono_t *z, int64_t center, uint32_t sym, int64_t coeff)
+{
+    eb_zono_exact(z, center);
+    if (coeff != 0) {
+        z->ids[0] = sym;
+        z->coeffs[0] = coeff;
+        z->len = 1u;
+    }
+}
+
+void eb_zono_uncertain(eb_zono_t *z, int64_t center, uint32_t radius,
+                       eb_symbols_t *pool)
+{
+    eb_zono_exact(z, center);
+    if (radius > 0u) {
+        z->ids[0] = eb_symbols_fresh(pool);
+        z->coeffs[0] = (int64_t)radius;
+        z->len = 1u;
+    }
+}
+
+static int64_t sat_add(int64_t a, int64_t b)
+{
+    if (b > 0 && a > INT64_MAX - b) { return INT64_MAX; }
+    if (b < 0 && a < INT64_MIN - b) { return INT64_MIN; }
+    return a + b;
+}
+
+static int64_t sat_mul(int64_t a, int64_t b)
+{
+    if (a == 0 || b == 0) { return 0; }
+    if (a > 0) {
+        if (b > 0) { if (a > INT64_MAX / b) { return INT64_MAX; } }
+        else       { if (b < INT64_MIN / a) { return INT64_MIN; } }
+    } else {
+        if (b > 0) { if (a < INT64_MIN / b) { return INT64_MIN; } }
+        else       { if (a < INT64_MAX / b) { return INT64_MAX; } }
+    }
+    return a * b;
+}
+
+static int64_t sat_neg(int64_t a) { return (a == INT64_MIN) ? INT64_MAX : -a; }
+static int64_t iabs64(int64_t a)  { return (a < 0) ? sat_neg(a) : a; }
+
+int64_t eb_zono_radius(const eb_zono_t *z)
+{
+    int64_t r = 0;
+    uint32_t i;
+    for (i = 0u; i < z->len; i++) {
+        r = sat_add(r, iabs64(z->coeffs[i]));
+    }
+    return r;
+}
+
+void eb_zono_interval(const eb_zono_t *z, int64_t *lo, int64_t *hi)
+{
+    int64_t r = eb_zono_radius(z);
+    if (lo != 0) { *lo = sat_add(z->center, sat_neg(r)); }
+    if (hi != 0) { *hi = sat_add(z->center, r); }
+}
+
+int64_t eb_zono_coeff_of(const eb_zono_t *z, uint32_t sym)
+{
+    uint32_t i;
+    for (i = 0u; i < z->len; i++) {
+        if (z->ids[i] == sym) { return z->coeffs[i]; }
+    }
+    return 0;
+}
+
+void eb_zono_shift(eb_zono_t *z, int64_t by) { z->center = sat_add(z->center, by); }
+
+void eb_zono_scale(eb_zono_t *z, int64_t k)
+{
+    uint32_t i;
+    z->center = sat_mul(z->center, k);
+    for (i = 0u; i < z->len; i++) {
+        z->coeffs[i] = sat_mul(z->coeffs[i], k);
+    }
+}
+
+/* Re-admit condensed magnitude as one FRESH, independent symbol.
+ *
+ * The `else` branch is the one that matters. Adding the spill to an EXISTING
+ * term keeps that term's symbol id, and two forms that both do so will CANCEL
+ * the error when subtracted -- because cancelling shared symbols is exactly
+ * what subtraction is for -- leaving a band that is too NARROW. That is the one
+ * failure mode that matters here: it lets a caller conclude two values agree
+ * when they do not. The Rust original shipped that bug; this port must not
+ * reproduce it, and the conformance stream is what checks that it does not. */
+static void absorb_spill(eb_zono_t *z, int64_t spilled, eb_symbols_t *pool)
+{
+    uint32_t min_i, k;
+    int64_t absorbed;
+
+    if (spilled == 0) { return; }
+    z->condensations += 1u;
+
+    if (z->len < (uint32_t)EB_ZONO_CAP) {
+        z->ids[z->len] = eb_symbols_fresh(pool);
+        z->coeffs[z->len] = spilled;
+        z->len += 1u;
+    } else {
+        min_i = 0u;
+        for (k = 1u; k < z->len; k++) {
+            if (iabs64(z->coeffs[k]) < iabs64(z->coeffs[min_i])) { min_i = k; }
+        }
+        absorbed = sat_add(iabs64(z->coeffs[min_i]), spilled);
+        z->ids[min_i] = eb_symbols_fresh(pool);
+        z->coeffs[min_i] = absorbed;
+    }
+    /* Terms must stay sorted by id so the merge pairs shared symbols. A fresh
+     * id is the largest yet minted, so one upward pass carries it to the end. */
+    for (k = 1u; k < z->len; k++) {
+        if (z->ids[k - 1u] > z->ids[k]) {
+            uint32_t ti = z->ids[k - 1u];
+            int64_t  tc = z->coeffs[k - 1u];
+            z->ids[k - 1u] = z->ids[k];
+            z->coeffs[k - 1u] = z->coeffs[k];
+            z->ids[k] = ti;
+            z->coeffs[k] = tc;
+        }
+    }
+}
+
+/* out = a + sign*b, merging two id-sorted lists in one pass. */
+static void merge(eb_zono_t *out, const eb_zono_t *a, const eb_zono_t *b,
+                  int64_t sign, eb_symbols_t *pool)
+{
+    eb_zono_t tmp;
+    int64_t spilled = 0;
+    uint32_t i = 0u, j = 0u;
+
+    eb_zono_exact(&tmp, sat_add(a->center,
+                                (sign < 0) ? sat_neg(b->center) : b->center));
+    tmp.condensations = a->condensations + b->condensations;
+
+    while (i < a->len || j < b->len) {
+        uint32_t id;
+        int64_t c;
+        if (j >= b->len || (i < a->len && a->ids[i] < b->ids[j])) {
+            id = a->ids[i]; c = a->coeffs[i]; i++;
+        } else if (i >= a->len || b->ids[j] < a->ids[i]) {
+            id = b->ids[j]; c = sat_mul(b->coeffs[j], sign); j++;
+        } else {
+            id = a->ids[i];
+            c = sat_add(a->coeffs[i], sat_mul(b->coeffs[j], sign));
+            i++; j++;
+        }
+        if (c == 0) { continue; }          /* exact cancellation */
+        if (tmp.len < (uint32_t)EB_ZONO_CAP) {
+            tmp.ids[tmp.len] = id;
+            tmp.coeffs[tmp.len] = c;
+            tmp.len += 1u;
+        } else {
+            spilled = sat_add(spilled, iabs64(c));
+        }
+    }
+    absorb_spill(&tmp, spilled, pool);
+    *out = tmp;
+}
+
+void eb_zono_add(eb_zono_t *out, const eb_zono_t *a, const eb_zono_t *b,
+                 eb_symbols_t *pool)
+{
+    merge(out, a, b, 1, pool);
+}
+
+void eb_zono_sub(eb_zono_t *out, const eb_zono_t *a, const eb_zono_t *b,
+                 eb_symbols_t *pool)
+{
+    merge(out, a, b, -1, pool);
+}
+
+void eb_zono_div_round(eb_zono_t *out, const eb_zono_t *a, int64_t d,
+                       eb_symbols_t *pool)
+{
+    eb_zono_t tmp;
+    int64_t q_c, rem, err;
+    uint32_t i;
+
+    q_c = eb_div_nearest(a->center, d);
+    eb_zono_exact(&tmp, q_c);
+    tmp.condensations = a->condensations;
+
+    /* Exact remainder bookkeeping: accumulate true leftovers, divide once. */
+    rem = iabs64(sat_add(a->center, sat_neg(sat_mul(q_c, d))));
+
+    for (i = 0u; i < a->len; i++) {
+        int64_t q = eb_div_nearest(a->coeffs[i], d);
+        if (q != 0 && tmp.len < (uint32_t)EB_ZONO_CAP) {
+            tmp.ids[tmp.len] = a->ids[i];
+            tmp.coeffs[tmp.len] = q;
+            tmp.len += 1u;
+            rem = sat_add(rem, iabs64(sat_add(a->coeffs[i],
+                                              sat_neg(sat_mul(q, d)))));
+        } else {
+            rem = sat_add(rem, iabs64(a->coeffs[i]));
+        }
+    }
+    err = (rem + d - 1) / d;    /* round the accumulated error UP */
+    absorb_spill(&tmp, err, pool);
+    *out = tmp;
+}

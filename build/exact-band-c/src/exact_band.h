@@ -197,6 +197,74 @@ uint32_t eb_phase_distance(uint32_t n, int64_t a, int64_t b);
  *  to every vector until odd rings were added. */
 int64_t eb_phase_offset(uint32_t n, int64_t a, int64_t b);
 
+
+/** Round-half-away-from-zero division; symmetric, so a sign flip in maps to a
+ *  sign flip out. A floor would bias one direction. */
+int64_t eb_div_nearest(int64_t n, int64_t d);
+
+/* ---- Zonotopes: bands that remember WHY they are uncertain ---------------
+ *
+ * eb_ibox_t is interval arithmetic, so it cannot tell that two quantities share
+ * a source: x - x comes out two wide instead of zero. A zonotope carries the
+ * sources as noise symbols with integer coefficients, so shared terms cancel.
+ *
+ * Capacity is fixed at EB_ZONO_CAP terms, stored inline -- no allocator. When a
+ * result would exceed it, the smallest term is absorbed into a FRESH symbol
+ * along with the overflow. Absorbing into an EXISTING symbol would be unsound:
+ * two forms dumping error into the same shared symbol cancel it on subtraction
+ * and the band comes out too NARROW. That bug was shipped once in the Rust
+ * original and is the reason this port exists.
+ */
+
+#define EB_ZONO_CAP 16
+
+/* Coefficients are bounded so EB_ZONO_CAP of them cannot overflow int64 when
+ * summed for the radius: 16 * 2^58 < 2^62. */
+#define EB_ZONO_COEF_MAX ((int64_t)288230376151711744)   /* 2^58 */
+
+/** Noise-symbol allocator. Symbol 0 is never issued, so it can mean "none". */
+typedef struct { uint32_t next; } eb_symbols_t;
+
+void     eb_symbols_init(eb_symbols_t *p);
+uint32_t eb_symbols_fresh(eb_symbols_t *p);
+
+typedef struct {
+    int64_t  center;
+    uint32_t ids[EB_ZONO_CAP];      /**< sorted ascending */
+    int64_t  coeffs[EB_ZONO_CAP];
+    uint32_t len;
+    uint32_t condensations;         /**< times tightness was given up */
+} eb_zono_t;
+
+/** An exactly known value. */
+void eb_zono_exact(eb_zono_t *z, int64_t center);
+/** A value whose uncertainty comes from an existing symbol. */
+void eb_zono_from_symbol(eb_zono_t *z, int64_t center, uint32_t sym, int64_t coeff);
+/** A value known to within `radius`, from a new independent source. */
+void eb_zono_uncertain(eb_zono_t *z, int64_t center, uint32_t radius,
+                       eb_symbols_t *pool);
+
+/** Total half-width: sum of |coefficient|. */
+int64_t eb_zono_radius(const eb_zono_t *z);
+/** The interval denoted, saturating at the int64 ends. */
+void eb_zono_interval(const eb_zono_t *z, int64_t *lo, int64_t *hi);
+/** Coefficient on `sym`, or 0. */
+int64_t eb_zono_coeff_of(const eb_zono_t *z, uint32_t sym);
+
+/** Add an exact offset. */
+void eb_zono_shift(eb_zono_t *z, int64_t by);
+/** Multiply by an exact integer. */
+void eb_zono_scale(eb_zono_t *z, int64_t k);
+/** out = a + b. Exact: shared symbols combine rather than stack. */
+void eb_zono_add(eb_zono_t *out, const eb_zono_t *a, const eb_zono_t *b,
+                 eb_symbols_t *pool);
+/** out = a - b. Exact, and a - a is exactly zero. */
+void eb_zono_sub(eb_zono_t *out, const eb_zono_t *a, const eb_zono_t *b,
+                 eb_symbols_t *pool);
+/** out = a / d, rounding once with full remainder accounting. d > 0. */
+void eb_zono_div_round(eb_zono_t *out, const eb_zono_t *a, int64_t d,
+                       eb_symbols_t *pool);
+
 #ifdef __cplusplus
 }
 #endif

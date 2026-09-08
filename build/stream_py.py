@@ -20,6 +20,7 @@ from tminus_band.band import (  # noqa: E402
     Banded, Contradiction, IBox, basis_meets, dist_sq_hex, dist_sq_z1,
     dist_sq_z2, dist_sq_z3, isqrt_ceil, isqrt_floor, max_basis,
 )
+from tminus_band.zono import Symbols as ZSymbols, Zono  # noqa: E402
 from phase_lock.model import Ring  # noqa: E402
 
 MASK = (1 << 64) - 1
@@ -164,6 +165,66 @@ def run(iters: int) -> int:
     return h
 
 
+SHARED = 4
+
+
+def run_zono(iters: int) -> int:
+    """The zonotope conformance stream. See CONFORMANCE-STREAM.md.
+
+    Separate from the main stream so that stream's committed checksums stay a
+    stable record. One accumulator is carried across iterations over a small set
+    of SHARED symbols plus fresh ones, so condensation actually happens -- which
+    is the whole reason this section exists. The internal term list is folded in,
+    not just the interval, because two substrates that condense differently can
+    still agree on a width by coincidence.
+    """
+    rng = Rng(SEED)
+    pool = ZSymbols()
+    shared = [pool.fresh() for _ in range(SHARED)]
+    acc = Zono.exact(0)
+    h = H0
+
+    for _ in range(iters):
+        scale = SCALES[rng.next() % 4]
+        op = rng.next() % 5
+        pick = rng.next() % SHARED
+        clamped = 1024 if scale > 1024 else scale
+        coeff = rng.coord(clamped)
+        cen = rng.coord(clamped)
+
+        if op == 0:
+            acc = acc.add(Zono.from_symbol(cen, shared[pick], coeff), pool)
+        elif op == 1:
+            acc = acc.sub(Zono.from_symbol(cen, shared[pick], coeff), pool)
+        elif op == 2:
+            # A fresh, independent source -- this is what fills the capacity.
+            acc = acc.add(Zono.uncertain(cen, abs(coeff), pool), pool)
+        elif op == 3:
+            acc = acc.scale(1 + rng.next() % 3)
+        else:
+            acc = acc.div_round(1 + rng.next() % 7, pool)
+
+        # Keep magnitudes bounded identically in every substrate, so none of
+        # them reaches its saturation edge and they cannot diverge there.
+        if acc.radius() > 1000000:
+            acc = acc.div_round(16, pool)
+
+        h = mix(h, bits(acc.center))
+        h = mix(h, bits(acc.radius()))
+        h = mix(h, len(acc.terms))
+        h = mix(h, acc.condensations)
+        for sid, c in acc.terms:
+            h = mix(h, sid)
+            h = mix(h, bits(c))
+    return h
+
+
 if __name__ == "__main__":
-    n = int(sys.argv[1]) if len(sys.argv) > 1 else 200000
-    print(f"iterations={n} checksum={run(n):016x}")
+    args = sys.argv[1:]
+    zono = "--zono" in args
+    nums = [a for a in args if not a.startswith("--")]
+    n = int(nums[0]) if nums else (50000 if zono else 200000)
+    if zono:
+        print(f"iterations={n} zono_checksum={run_zono(n):016x}")
+    else:
+        print(f"iterations={n} checksum={run(n):016x}")

@@ -104,5 +104,39 @@ check_stream "C" "$STREAM_C_ITERS" \
 check_stream "Python" "$STREAM_PY_ITERS" \
     "$(python3 stream_py.py "$STREAM_PY_ITERS")"
 
+say "zonotope stream: the section covering condensation"
+# Zonotopes had a real soundness bug -- condensation that produced bands too
+# NARROW -- so this section folds in the internal term list, not just the
+# interval. Reintroducing that bug in any one substrate moves its checksum.
+ZONO_ITERS=${ZONO_ITERS:-200000}
+ZONO_PY_ITERS=${ZONO_PY_ITERS:-50000}
+
+want_zono() {
+    python3 -c "import json,sys;print(json.load(open('stream.json'))['zono_checksums'][sys.argv[1]])" "$1"
+}
+
+check_zono() {
+    name=$1; iters=$2; line=$3
+    expected=$(want_zono "$iters") || {
+        echo "FAIL: stream.json has no zono checksum for $iters iterations" >&2
+        exit 1
+    }
+    actual="${line##*zono_checksum=}"
+    if [ "$actual" != "$expected" ]; then
+        echo "FAIL: $name zonotope stream at $iters iterations" >&2
+        echo "      got      $actual"   >&2
+        echo "      expected $expected" >&2
+        exit 1
+    fi
+    echo "  ok  $name at $iters iterations: $actual"
+}
+
+check_zono "Rust" "$ZONO_ITERS" \
+    "$(cd exact-band && cargo run --quiet --release --example zono_stream -- "$ZONO_ITERS")"
+check_zono "C" "$ZONO_ITERS" \
+    "$(cd exact-band-c && ./build/stream "$ZONO_ITERS" --zono)"
+check_zono "Python" "$ZONO_PY_ITERS" \
+    "$(python3 stream_py.py "$ZONO_PY_ITERS" --zono)"
+
 printf '\n\033[1mAll four substrates agree, the golden file matches its generator,\n'
 printf 'and the three implementations fold identical checksums.\033[0m\n'

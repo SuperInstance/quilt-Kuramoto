@@ -160,6 +160,91 @@ static uint64_t step(uint64_t h)
     return h;
 }
 
+
+/* ---- the zonotope stream ------------------------------------------------
+ *
+ * A SEPARATE stream, so the original checksums stay a stable historical
+ * record. It carries one accumulator across iterations, over a small set of
+ * SHARED symbols plus fresh ones, so condensation actually happens -- which is
+ * the whole reason this section exists. The Rust original shipped an unsound
+ * condensation that produced bands too NARROW; the internal term list is mixed
+ * in, not just the interval, so a substrate that condenses differently diverges
+ * even when its interval happens to agree.
+ */
+
+#define ZSHARED 4
+
+static uint64_t zono_step(uint64_t h, eb_zono_t *acc, const uint32_t *shared,
+                          eb_symbols_t *pool)
+{
+    uint64_t scale = SCALES[next_u64() % 4u];
+    uint32_t op = (uint32_t)(next_u64() % 5u);
+    uint32_t pick = (uint32_t)(next_u64() % (uint64_t)ZSHARED);
+    int32_t coeff = draw_coord(scale > 1024u ? 1024u : scale);
+    int32_t cen = draw_coord(scale > 1024u ? 1024u : scale);
+    eb_zono_t rhs, out;
+    uint32_t i;
+
+    switch (op) {
+    case 0:
+        eb_zono_from_symbol(&rhs, cen, shared[pick], coeff);
+        eb_zono_add(&out, acc, &rhs, pool);
+        break;
+    case 1:
+        eb_zono_from_symbol(&rhs, cen, shared[pick], coeff);
+        eb_zono_sub(&out, acc, &rhs, pool);
+        break;
+    case 2:
+        /* A fresh, independent source -- this is what fills the capacity. */
+        eb_zono_uncertain(&rhs, cen, (uint32_t)(coeff < 0 ? -coeff : coeff), pool);
+        eb_zono_add(&out, acc, &rhs, pool);
+        break;
+    case 3:
+        out = *acc;
+        eb_zono_scale(&out, 1 + (int64_t)(next_u64() % 3u));
+        break;
+    default:
+        eb_zono_div_round(&out, acc, 1 + (int64_t)(next_u64() % 7u), pool);
+        break;
+    }
+
+    /* Keep magnitudes bounded identically in every substrate, so none of them
+     * reaches its saturation edge and they cannot diverge there. */
+    if (eb_zono_radius(&out) > 1000000) {
+        eb_zono_t shrunk;
+        eb_zono_div_round(&shrunk, &out, 16, pool);
+        out = shrunk;
+    }
+    *acc = out;
+
+    h = mix(h, bits_i64(acc->center));
+    h = mix(h, bits_i64(eb_zono_radius(acc)));
+    h = mix(h, (uint64_t)acc->len);
+    h = mix(h, (uint64_t)acc->condensations);
+    for (i = 0u; i < acc->len; i++) {
+        h = mix(h, (uint64_t)acc->ids[i]);
+        h = mix(h, bits_i64(acc->coeffs[i]));
+    }
+    return h;
+}
+
+static uint64_t run_zono(unsigned long iters)
+{
+    uint64_t h = H0;
+    eb_symbols_t pool;
+    eb_zono_t acc;
+    uint32_t shared[ZSHARED];
+    unsigned long i;
+    uint32_t k;
+
+    rng_state = SEED;
+    eb_symbols_init(&pool);
+    for (k = 0u; k < (uint32_t)ZSHARED; k++) { shared[k] = eb_symbols_fresh(&pool); }
+    eb_zono_exact(&acc, 0);
+    for (i = 0; i < iters; i++) { h = zono_step(h, &acc, shared, &pool); }
+    return h;
+}
+
 int main(int argc, char **argv)
 {
     unsigned long iters = 200000ul;
@@ -168,6 +253,11 @@ int main(int argc, char **argv)
 
     if (argc > 1) {
         iters = strtoul(argv[1], 0, 10);
+    }
+    if (argc > 2 && strcmp(argv[2], "--zono") == 0) {
+        printf("iterations=%lu zono_checksum=%016llx\n", iters,
+               (unsigned long long)run_zono(iters));
+        return 0;
     }
     rng_state = SEED;
     for (i = 0; i < iters; i++) {

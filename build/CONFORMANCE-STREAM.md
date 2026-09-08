@@ -145,3 +145,66 @@ default — a speed decision, not a trust one. Its answer at the full million is
 recorded in `stream.json` and matches the other two exactly.
 
 Raise any of them with `STREAM_RS_ITERS`, `STREAM_C_ITERS`, `STREAM_PY_ITERS`.
+
+---
+
+# The zonotope stream
+
+A **separate** stream, with its own checksums in `stream.json` under
+`zono_checksums`, so the record above stays stable.
+
+It exists because zonotopes had a real soundness bug. `absorb_spill`, when the
+form was full, added the overflow to an *existing* term and kept that term's
+symbol id. Two forms that both did so **cancelled the error when subtracted** —
+cancelling shared symbols being exactly what subtraction is for — and the
+difference came out too **narrow**. A band too narrow lets a caller conclude two
+values agree when they do not, which is the one failure this whole repository is
+built to prevent.
+
+## What it does differently
+
+**It carries state.** One accumulator persists across iterations, over four
+*shared* symbols plus fresh ones, so the capacity genuinely fills and
+condensation genuinely happens. A stateless stream would rarely reach the branch
+where the bug lived.
+
+**It folds in the internal representation, not just the interval.** After every
+step it mixes the centre, radius, term count, condensation count, and then
+**every `(symbol id, coefficient)` pair**. Two substrates that condense
+differently can agree on a width by coincidence; they cannot agree on the term
+list by coincidence.
+
+**It bounds magnitudes identically.** Rust computes the radius in `i128`, C and
+Python saturate at `int64`. Left alone they would diverge at the saturation
+edge for reasons that have nothing to do with the algebra, so every substrate
+applies the same rule: when the radius exceeds 1,000,000, divide by 16. The
+harness also narrows Rust's `i128` radius through a checked conversion, so a
+value that escaped the bound would abort rather than silently wrap.
+
+## One iteration
+
+| draws | operation |
+|---|---|
+| `scale`, `op = next() % 5`, `pick = next() % 4`, `coeff`, `centre` | one of: add a shared-symbol form; subtract one; add a **fresh** independent source; scale by `1 + next()%3`; `div_round` by `1 + next()%7` |
+| — | if `radius > 1_000_000`, `div_round(16)` |
+| — | mix centre, radius, term count, condensations, then every `(id, coeff)` |
+
+Coefficients and centres are drawn within ±1024 so nothing approaches
+saturation. Capacity is 16 terms in all three substrates (`EB_ZONO_CAP` in C,
+`CAP` in Python, `Zono<16>` in Rust).
+
+## Does it catch the bug it was built for?
+
+Yes — checked by reintroducing it. With the unsound condensation restored in the
+C port alone, at 50,000 iterations:
+
+```
+correct:   9a226dc755358b21     (Rust, C, Python)
+unsound:   5fddfcabb4cc32ca     (C only)
+```
+
+Rust and Python continue to report the correct value, so the divergence is
+caught rather than silently shared. Restoring the fix returns C to
+`9a226dc755358b21` exactly.
+
+All three substrates agree at 1,000 / 10,000 / 50,000 / 200,000 iterations.

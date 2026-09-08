@@ -12,6 +12,14 @@
     "rust": 1000000,
     "c": 1000000,
     "python": 100000,
-    "_note": "Python is capped lower only because it is ~1000x slower per case, not because it is trusted less: it is verified at 1000000 by hand and the result is recorded above. Raise it with STREAM_PY_ITERS."
+    "_note": "Python is capped lower only because it is ~1000x slower per case, not because it is trusted less: it is verified at 1000000 by hand and the result is recorded above. Raise it with STREAM_PY_ITERS.",
+    "zono": 200000
+  },
+  "zono_checksums": {
+    "_": "The zonotope stream, kept separate so the checksums above stay a stable historical record. Carries one accumulator over shared and fresh symbols so condensation actually happens, and folds in the internal term list -- not just the interval -- because two substrates that condense differently can still agree on a width by coincidence.",
+    "1000": "4f50528c07976244",
+    "10000": "a714ebc4e81f02ba",
+    "50000": "9a226dc755358b21",
+    "200000": "e44d05e4abbbd941"
   }
 }

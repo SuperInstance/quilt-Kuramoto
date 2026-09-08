@@ -161,6 +161,16 @@ impl<const K: usize> Zono<K> {
     /// Is the value known exactly?
     pub fn is_exact(&self) -> bool { self.radius() == 0 }
 
+    /// The `i`-th term as `(symbol, coefficient)`, or `None`.
+    ///
+    /// Exposed so a conformance harness can mix the INTERNAL representation,
+    /// not merely the interval: two substrates that condense differently can
+    /// still agree on a width by coincidence, and the term list is where that
+    /// coincidence stops.
+    pub fn term(&self, i: usize) -> Option<(u32, i64)> {
+        if i < self.len { Some((self.ids[i], self.coeffs[i])) } else { None }
+    }
+
     /// The coefficient on `symbol`, or 0.
     pub fn coeff_of(&self, symbol: u32) -> i64 {
         let mut i = 0;
