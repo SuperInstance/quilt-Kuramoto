@@ -245,6 +245,50 @@ static uint64_t run_zono(unsigned long iters)
     return h;
 }
 
+
+/* ---- the agreement sequence ---------------------------------------------
+ *
+ * The headline claim of the zonotope work: after consensus on a ring, the
+ * enclosure of x0 - x1 collapses to zero while interval arithmetic stays
+ * pinned. It was measured in Rust only; emitting the same sequence here and in
+ * Python holds it to the standard the rest of the algebra is held to.
+ */
+static void run_agreement(unsigned long rounds)
+{
+    eb_symbols_t pool;
+    eb_fixed_t z[3], prev[3], d, t;
+    eb_zono_t seed;
+    uint32_t syms[3];
+    unsigned long r;
+    int i;
+
+    eb_symbols_init(&pool);
+    for (i = 0; i < 3; i++) {
+        syms[i] = eb_symbols_fresh(&pool);
+        eb_zono_from_symbol(&seed, 1000, syms[i], 12);
+        eb_fixed_new(&z[i], &seed);
+    }
+
+    printf("agreement_widths=");
+    for (r = 0; r <= rounds; r++) {
+        int64_t w;
+        eb_fixed_sub(&d, &z[0], &z[1], &pool);
+        w = 1000 * eb_fixed_width_scaled(&d) / ((int64_t)1 << d.shift);
+        printf("%s%lld", (r == 0) ? "" : ",", (long long)w);
+
+        for (i = 0; i < 3; i++) { prev[i] = z[i]; }
+        for (i = 0; i < 3; i++) {
+            t = prev[i];
+            eb_fixed_scale(&t, 2);
+            eb_fixed_add(&t, &t, &prev[(i + 2) % 3], &pool);
+            eb_fixed_add(&t, &t, &prev[(i + 1) % 3], &pool);
+            eb_fixed_div_pow2(&t, 2u);
+            z[i] = t;
+        }
+    }
+    printf("\n");
+}
+
 int main(int argc, char **argv)
 {
     unsigned long iters = 200000ul;
@@ -253,6 +297,10 @@ int main(int argc, char **argv)
 
     if (argc > 1) {
         iters = strtoul(argv[1], 0, 10);
+    }
+    if (argc > 2 && strcmp(argv[2], "--agree") == 0) {
+        run_agreement(iters);
+        return 0;
     }
     if (argc > 2 && strcmp(argv[2], "--zono") == 0) {
         printf("iterations=%lu zono_checksum=%016llx\n", iters,

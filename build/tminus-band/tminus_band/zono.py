@@ -23,7 +23,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import List, Tuple
 
-__all__ = ["CAP", "Symbols", "Zono"]
+__all__ = ["CAP", "Fixed", "Symbols", "Zono"]
 
 #: Terms held inline. Matches EB_ZONO_CAP in the C port and the test types in Rust.
 CAP = 16
@@ -213,3 +213,80 @@ class Zono:
         for k in range(1, len(self.terms)):
             if self.terms[k - 1][0] > self.terms[k][0]:
                 self.terms[k - 1], self.terms[k] = self.terms[k], self.terms[k - 1]
+
+
+@dataclass
+class Fixed:
+    """A zonotope carried at a binary scale: the value is ``z / 2**shift``.
+
+    :meth:`Zono.div_round` mints a fresh noise symbol on every call, because
+    integer division genuinely loses information and affine arithmetic has no
+    way to say "this error is a deterministic function of inputs I already
+    track". In a loop that divides every step those charges never cancel and the
+    band creeps — measurably: plain interval arithmetic beats a dividing
+    zonotope outright on ring consensus.
+
+    The fix is to stop dividing. Dividing by a power of two becomes a change of
+    scale — :meth:`div_pow2` increments an exponent and touches no coefficient —
+    so it is **exact and mints nothing**. Rounding happens once, at
+    :meth:`rescale`, instead of once per step.
+    """
+
+    z: Zono
+    shift: int = 0
+
+    def div_pow2(self, k: int) -> "Fixed":
+        """Divide by ``2**k``, exactly. No rounding, no new symbol."""
+        return Fixed(self.z, self.shift + k)
+
+    def scale(self, k: int) -> "Fixed":
+        return Fixed(self.z.scale(k), self.shift)
+
+    def _aligned(self, other: "Fixed") -> Tuple[Zono, Zono, int]:
+        """Raise the smaller scale to meet the larger.
+
+        Raising is a multiplication and therefore exact; it is lowering that
+        would round, so this never rounds. Keeping magnitudes in range is the
+        caller's job, via :meth:`rescale`.
+        """
+        s = max(self.shift, other.shift)
+        a = self.z.scale(1 << (s - self.shift)) if self.shift < s else self.z
+        b = other.z.scale(1 << (s - other.shift)) if other.shift < s else other.z
+        return a, b, s
+
+    def add(self, other: "Fixed", pool: Symbols) -> "Fixed":
+        a, b, s = self._aligned(other)
+        return Fixed(a.add(b, pool), s)
+
+    def sub(self, other: "Fixed", pool: Symbols) -> "Fixed":
+        """Exact difference — the operation that decides whether two estimates
+        have converged, and the one interval arithmetic cannot answer."""
+        a, b, s = self._aligned(other)
+        return Fixed(a.sub(b, pool), s)
+
+    def rescale(self, target: int, pool: Symbols) -> "Fixed":
+        """Drop the scale to `target`, rounding once. The only place tightness
+        is lost."""
+        if target >= self.shift:
+            return self
+        return Fixed(self.z.div_round(1 << (self.shift - target), pool), target)
+
+    def width_scaled(self) -> int:
+        """Total width in units of ``2**-shift``."""
+        return 2 * self.z.radius()
+
+    def interval(self) -> Tuple[int, int]:
+        """Rounded **outward** so it never understates."""
+        r = self.z.radius()
+        d = 1 << self.shift
+        lo = self.z.center - r
+        hi = self.z.center + r
+        return (_floor_div(lo, d), _ceil_div(hi, d))
+
+
+def _floor_div(n: int, d: int) -> int:
+    return n // d
+
+
+def _ceil_div(n: int, d: int) -> int:
+    return -((-n) // d)

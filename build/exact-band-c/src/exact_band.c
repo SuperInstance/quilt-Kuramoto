@@ -617,3 +617,68 @@ void eb_zono_div_round(eb_zono_t *out, const eb_zono_t *a, int64_t d,
     absorb_spill(&tmp, err, pool);
     *out = tmp;
 }
+
+/* ---- Fixed --------------------------------------------------------------- */
+
+void eb_fixed_new(eb_fixed_t *f, const eb_zono_t *z)
+{
+    f->z = *z;
+    f->shift = 0u;
+}
+
+void eb_fixed_div_pow2(eb_fixed_t *f, uint32_t k) { f->shift += k; }
+
+void eb_fixed_scale(eb_fixed_t *f, int64_t k) { eb_zono_scale(&f->z, k); }
+
+int64_t eb_fixed_width_scaled(const eb_fixed_t *f)
+{
+    return sat_mul(2, eb_zono_radius(&f->z));
+}
+
+/* Bring both operands to a common scale by RAISING the smaller.
+ *
+ * Raising is a multiplication and therefore exact; it is lowering that would
+ * round, so this never rounds. Keeping magnitudes in range is the caller's job,
+ * via eb_fixed_rescale. */
+static void align(const eb_fixed_t *a, const eb_fixed_t *b,
+                  eb_zono_t *za, eb_zono_t *zb, uint32_t *shift)
+{
+    uint32_t s = (a->shift > b->shift) ? a->shift : b->shift;
+    *za = a->z;
+    *zb = b->z;
+    if (a->shift < s) { eb_zono_scale(za, (int64_t)1 << (s - a->shift)); }
+    if (b->shift < s) { eb_zono_scale(zb, (int64_t)1 << (s - b->shift)); }
+    *shift = s;
+}
+
+void eb_fixed_add(eb_fixed_t *out, const eb_fixed_t *a, const eb_fixed_t *b,
+                  eb_symbols_t *pool)
+{
+    eb_zono_t za, zb, r;
+    uint32_t s;
+    align(a, b, &za, &zb, &s);
+    eb_zono_add(&r, &za, &zb, pool);
+    out->z = r;
+    out->shift = s;
+}
+
+void eb_fixed_sub(eb_fixed_t *out, const eb_fixed_t *a, const eb_fixed_t *b,
+                  eb_symbols_t *pool)
+{
+    eb_zono_t za, zb, r;
+    uint32_t s;
+    align(a, b, &za, &zb, &s);
+    eb_zono_sub(&r, &za, &zb, pool);
+    out->z = r;
+    out->shift = s;
+}
+
+void eb_fixed_rescale(eb_fixed_t *out, const eb_fixed_t *a, uint32_t target,
+                      eb_symbols_t *pool)
+{
+    eb_zono_t r;
+    if (target >= a->shift) { *out = *a; return; }
+    eb_zono_div_round(&r, &a->z, (int64_t)1 << (a->shift - target), pool);
+    out->z = r;
+    out->shift = target;
+}

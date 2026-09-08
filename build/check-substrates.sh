@@ -138,5 +138,27 @@ check_zono "C" "$ZONO_ITERS" \
 check_zono "Python" "$ZONO_PY_ITERS" \
     "$(python3 stream_py.py "$ZONO_PY_ITERS" --zono)"
 
+say "the agreement result, reproduced in all three substrates"
+# The headline zonotope claim -- after consensus the enclosure of x0 - x1
+# collapses to zero while interval arithmetic stays pinned -- was measured in
+# Rust only. Held here to the same standard as the rest of the algebra.
+AGREE_ROUNDS=${AGREE_ROUNDS:-10}
+a_rs=$(cd exact-band && cargo run --quiet --release --example agreement -- "$AGREE_ROUNDS" --sequence)
+a_c=$(cd exact-band-c && ./build/stream "$AGREE_ROUNDS" --agree)
+a_py=$(python3 agree_check.py "$AGREE_ROUNDS")
+if [ "$a_rs" != "$a_c" ] || [ "$a_rs" != "$a_py" ]; then
+    echo "FAIL: the agreement sequence differs between substrates" >&2
+    echo "  Rust:   $a_rs"   >&2
+    echo "  C:      $a_c"    >&2
+    echo "  Python: $a_py"   >&2
+    exit 1
+fi
+case "$a_rs" in
+    *,0) echo "  ok  all three collapse to exact agreement: ${a_rs#agreement_widths=}" ;;
+    *) echo "FAIL: the sequence does not reach zero -- the claim is that it does" >&2
+       echo "  $a_rs" >&2
+       exit 1 ;;
+esac
+
 printf '\n\033[1mAll four substrates agree, the golden file matches its generator,\n'
 printf 'and the three implementations fold identical checksums.\033[0m\n'

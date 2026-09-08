@@ -230,6 +230,13 @@ two nodes. Widths in thousandths of a unit:
 | 6 | 11 | **11** | 48000 |
 | 8 | **0** | **0** | 48000 |
 
+Reproduced in **all three substrates** — Rust, C and Python emit the identical
+sequence, and `check-substrates.sh` compares them, so the headline claim is held
+to the same standard as the rest of the algebra rather than resting on one
+implementation. Breaking `div_pow2` into a real division in any one of them
+stalls its collapse at 4000 while the other two still reach 0, which is both the
+negative control and the clearest statement of why the scaled form exists.
+
 The zonotope tracks the true width **exactly at every round**, to zero. The box
 never narrows — interval arithmetic has no way to know that `x₀` and `x₁` are
 built from the same three readings, so it must assume they are extreme in

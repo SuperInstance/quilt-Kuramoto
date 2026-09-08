@@ -51,6 +51,34 @@ fn true_width_num(steps: u32) -> i128 {
 fn milli(num: i128, den: i128) -> i128 { 1000 * num / den }
 
 fn main() {
+    // `--sequence` emits just the widths, for the cross-substrate comparison in
+    // check-substrates.sh. The C and Python harnesses print the same line.
+    if std::env::args().any(|a| a == "--sequence") {
+        let rounds: usize = std::env::args()
+            .nth(1).and_then(|s| s.parse().ok()).unwrap_or(10);
+        let mut pool = Symbols::new();
+        let syms: [u32; N] = core::array::from_fn(|_| pool.fresh());
+        let mut z: [F; N] = core::array::from_fn(|i| {
+            Fixed::new(Z::from_symbol(CENTER as i64, syms[i], RADIUS as i64))
+        });
+        let mut out = String::new();
+        for r in 0..=rounds {
+            let d = z[0].sub(z[1], &mut pool);
+            let w = 1000 * d.width_scaled() / (1i128 << d.shift());
+            if r > 0 { out.push(','); }
+            out.push_str(&w.to_string());
+            let prev = z;
+            for i in 0..N {
+                z[i] = prev[i].scale(2)
+                    .add(prev[(i + N - 1) % N], &mut pool)
+                    .add(prev[(i + 1) % N], &mut pool)
+                    .div_pow2(2);
+            }
+        }
+        println!("agreement_widths={out}");
+        return;
+    }
+
     println!("Ring of {N} nodes, each holding one reading known to ±{RADIUS}.");
     println!("After t rounds of consensus, how wide is the enclosure of");
     println!("x0 - x1 -- the disagreement between two nodes?\n");

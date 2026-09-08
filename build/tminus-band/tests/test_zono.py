@@ -124,3 +124,66 @@ def test_terms_stay_sorted_by_symbol_id():
         z = z.add(Zono.from_symbol(1, p.fresh(), k + 1), p)
         ids = [s for s, _ in z.terms]
         assert ids == sorted(ids), f"terms out of order after {k + 1} adds"
+
+
+# ---- Fixed: the scaled form that stops dividing ---------------------------
+
+from tminus_band.zono import Fixed  # noqa: E402
+
+
+def test_div_pow2_is_exact_and_mints_nothing():
+    p = Symbols()
+    s = p.fresh()
+    f = Fixed(Zono.from_symbol(1000, s, 12)).div_pow2(6)
+    assert f.z.condensations == 0
+    assert f.z.terms == [(s, 12)], "no coefficient is touched by a scale change"
+
+
+def test_rescale_widens_and_is_the_only_place_tightness_is_lost():
+    p = Symbols()
+    f = Fixed(Zono.from_symbol(1000, p.fresh(), 12)).div_pow2(6)
+    before = f.interval()
+    after = f.rescale(0, p)
+    assert after.interval()[0] <= before[0]
+    assert after.interval()[1] >= before[1]
+    assert after.z.condensations > 0
+
+
+def test_only_a_zonotope_can_conclude_that_two_nodes_agree():
+    """The claim this whole crate exists for, in the Python substrate.
+
+    After consensus the true disagreement collapses to zero. Interval arithmetic
+    cannot see it at any number of rounds, because it has no way to know that
+    x0 and x1 are built from the same three readings.
+    """
+    n, rounds = 3, 10
+    pool = Symbols()
+    syms = [pool.fresh() for _ in range(n)]
+    z = [Fixed(Zono.from_symbol(1000, syms[i], 12)) for i in range(n)]
+    widths = []
+    for _ in range(rounds + 1):
+        d = z[0].sub(z[1], pool)
+        widths.append(1000 * d.width_scaled() // (1 << d.shift))
+        prev = list(z)
+        for i in range(n):
+            z[i] = (prev[i].scale(2)
+                    .add(prev[(i + n - 1) % n], pool)
+                    .add(prev[(i + 1) % n], pool)
+                    .div_pow2(2))
+
+    assert widths[0] == 48000
+    assert widths[-1] == 0, "the zonotope must reach exact agreement"
+    assert widths == sorted(widths, reverse=True), "consensus never un-converges"
+
+    # The identical recurrence under interval arithmetic, carried exactly.
+    lo = [988] * n
+    hi = [1012] * n
+    den = 1
+    for _ in range(rounds):
+        plo, phi = list(lo), list(hi)
+        for i in range(n):
+            lo[i] = 2 * plo[i] + plo[(i + n - 1) % n] + plo[(i + 1) % n]
+            hi[i] = 2 * phi[i] + phi[(i + n - 1) % n] + phi[(i + 1) % n]
+        den *= 4
+    box = 1000 * ((hi[0] - lo[0]) + (hi[1] - lo[1])) // den
+    assert box == 48000, "interval arithmetic never narrows, at any round count"

@@ -265,6 +265,44 @@ void eb_zono_sub(eb_zono_t *out, const eb_zono_t *a, const eb_zono_t *b,
 void eb_zono_div_round(eb_zono_t *out, const eb_zono_t *a, int64_t d,
                        eb_symbols_t *pool);
 
+
+/* ---- Fixed: a zonotope carried at a binary scale -------------------------
+ *
+ * eb_zono_div_round mints a fresh symbol every call, because integer division
+ * genuinely loses information. In a loop that divides every step those charges
+ * never cancel and the band creeps -- measurably: plain interval arithmetic
+ * beats a dividing zonotope outright on ring consensus.
+ *
+ * The fix is to stop dividing. Dividing by a power of two becomes a change of
+ * scale: eb_fixed_div_pow2 increments an exponent and touches no coefficient,
+ * so it is EXACT and mints nothing. Rounding happens once, at eb_fixed_rescale,
+ * instead of once per step.
+ */
+
+typedef struct {
+    eb_zono_t z;
+    uint32_t  shift;      /**< the value is z / 2^shift */
+} eb_fixed_t;
+
+/** A value at scale zero. */
+void eb_fixed_new(eb_fixed_t *f, const eb_zono_t *z);
+/** Divide by 2^k, exactly. No rounding, no new symbol. */
+void eb_fixed_div_pow2(eb_fixed_t *f, uint32_t k);
+/** Multiply by an exact integer. */
+void eb_fixed_scale(eb_fixed_t *f, int64_t k);
+/** out = a + b, exact. */
+void eb_fixed_add(eb_fixed_t *out, const eb_fixed_t *a, const eb_fixed_t *b,
+                  eb_symbols_t *pool);
+/** out = a - b, exact -- the operation that decides whether two estimates have
+ *  converged, and the one interval arithmetic cannot answer. */
+void eb_fixed_sub(eb_fixed_t *out, const eb_fixed_t *a, const eb_fixed_t *b,
+                  eb_symbols_t *pool);
+/** Drop the scale to `target`, rounding once. The only place tightness is lost. */
+void eb_fixed_rescale(eb_fixed_t *out, const eb_fixed_t *a, uint32_t target,
+                      eb_symbols_t *pool);
+/** Total width in units of 2^-shift: 2 * radius. */
+int64_t eb_fixed_width_scaled(const eb_fixed_t *f);
+
 #ifdef __cplusplus
 }
 #endif
