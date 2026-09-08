@@ -246,6 +246,33 @@ It is never wrong. It simply **cannot conclude that the nodes agree** — at any
 number of rounds, for any tolerance below 48. That is the operation this crate
 is for, and it is the one interval arithmetic cannot do.
 
+### Prior art: most of the mechanism is decades old
+
+A literature review (`research/05-PRIOR-ART-EXACT-NUMERICS.md`) found that the
+core ideas here are not new, and the honest list is not short:
+
+- shared noise symbols cancelling under subtraction **is** affine arithmetic
+  (Comba & Stolfi 1993) — `x − x = 0` is its oldest selling point, not ours;
+- pushing an inexact operation's error into a fresh rounded-up symbol is the
+  standard AA treatment of rounding;
+- condensation is **zonotope order reduction**, a surveyed technique roughly two
+  decades old, and [Arpra](https://github.com/arpra-project/arpra) (2021)
+  already does the same merge over MPFR;
+- `LazySets.jl` already supports exact **`Rational`** zonotopes;
+- "zonotopes beat intervals for networked estimators converging toward
+  agreement" is established set-membership estimation, including zonotope
+  diffusion across agents (IRI-UPC, IEEE CDC 2018) — the same territory as the
+  ring-consensus result below, years earlier.
+
+What appears to remain unclaimed — *appears*, because the review was
+web-search-only: affine arithmetic that is **integer all the way down** while
+also `no_std`, allocator-free and fixed-capacity for an MCU; the `Fixed<K>`
+binary-scale trick; and the cross-substrate byte-exact treatment with a
+soundness bug documented and caught by its own sweep.
+
+The engineering below stands. The novelty framing does not, and the table above
+replaces it.
+
 ### Stress-testing that result — which found a soundness bug
 
 The agreement demo above is a clean setup: three nodes, one reading each,

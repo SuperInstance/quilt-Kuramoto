@@ -55,6 +55,40 @@
 //! The win is on **chains that reuse a value**, which is what the dependency
 //! problem actually is. `examples/zono_vs_box.rs` measures where the crossover
 //! sits rather than asserting it.
+//!
+//! ## Prior art — most of this is not new
+//!
+//! A literature review (`research/05-PRIOR-ART-EXACT-NUMERICS.md`) established
+//! that the core mechanisms here are decades old, and it is worth saying so
+//! where the code lives rather than only in a report:
+//!
+//! * **Shared noise symbols that cancel under subtraction** is the founding
+//!   idea of affine arithmetic (Comba & Stolfi, 1993; Stolfi & de Figueiredo,
+//!   *Self-Validated Numerical Methods and Applications*). "`x − x` collapses
+//!   to zero" is affine arithmetic's oldest selling point, not a contribution
+//!   of this module.
+//! * **Pushing an inexact operation's error into a fresh, rounded-up symbol**
+//!   is the standard AA treatment of rounding. `div_round`, `mul` and
+//!   `absorb_spill` apply it to integer remainders instead of floating-point
+//!   rounding; the soundness argument is the classical one.
+//! * **Condensation** is zonotope *order reduction* — a named, surveyed
+//!   technique (Girard and successors; see "Methods for Order Reduction of
+//!   Zonotopes", TUM). This is its coarsest instance, target order one.
+//!   [Arpra](https://github.com/arpra-project/arpra) (2021) already does the
+//!   same merge-the-smallest-terms trick over MPFR.
+//! * **Exact-rational zonotopes already exist**: `LazySets.jl` supports
+//!   `Rational` coefficients as a type parameter.
+//! * **Zonotopes beating intervals for networked estimators** is established
+//!   set-membership estimation — including zonotope diffusion across agents
+//!   toward partial consensus (IRI-UPC, IEEE CDC 2018), which is the same
+//!   territory as this crate's ring-consensus example, years earlier.
+//!
+//! What appears to remain unclaimed, and is stated as *appears* because the
+//! review was web-search-only: an affine arithmetic that is **integer all the
+//! way down** while also being `no_std`, allocator-free and fixed-capacity for
+//! an MCU; the [`Fixed`] binary-scale trick that makes division by a power of
+//! two mint nothing; and the cross-substrate (Rust/C/Python) byte-exact
+//! treatment with a soundness bug documented and caught by its own sweep.
 
 use crate::isqrt;
 
