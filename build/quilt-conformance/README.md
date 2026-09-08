@@ -72,8 +72,21 @@ stream checksum — and can then display a badge that means something.
 
 ## Status and scope
 
-Python reference only, so far; the C and Rust reference ports belong here next
-so this directory practises what it asks for.
+**Three references — Python, C99 and Rust — agree on all 8 cases and the
+10,000-cell stream.** `./check.sh` compares the hashes and fails if any two
+disagree, if fewer than 9 are produced, or if the published badge value is
+missing from the corpus. Flipping the C serializer to big-endian makes it fail
+immediately, which is the control.
+
+The C and Rust references are standalone on purpose — one `cc` and one `rustc`
+invocation, no crate, no build system — so a port author can check their work
+without adopting anything from here.
+
+A note on how this file was nearly wrong: the first version of `check.sh`
+diffed the whole output and reported a divergence that turned out to be Python
+printing `65B` where C printed `65`. A harness bug dressed as a substrate
+disagreement — the exact mistake this directory exists to stop people making.
+It now compares hashes and nothing else.
 
 This is a finding about public claims in repositories **this work does not
 own**, so nothing outside `quilt-Kuramoto` has been modified. The corpus is

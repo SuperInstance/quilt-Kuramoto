@@ -138,6 +138,12 @@ check_zono "C" "$ZONO_ITERS" \
 check_zono "Python" "$ZONO_PY_ITERS" \
     "$(python3 stream_py.py "$ZONO_PY_ITERS" --zono)"
 
+say "quilt cell state hash: three references, one corpus"
+# Several ports advertise a byte-exact badge for a hash their source never
+# computes. This is the corpus that would make such a claim checkable, held to
+# its own standard: Python, C and Rust must agree on every case.
+( cd quilt-conformance && ./check.sh )
+
 say "the agreement result, reproduced in all three substrates"
 # The headline zonotope claim -- after consensus the enclosure of x0 - x1
 # collapses to zero while interval arithmetic stays pinned -- was measured in
