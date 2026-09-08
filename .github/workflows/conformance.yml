@@ -1,0 +1,81 @@
+# Everything in build/ is only as good as the fact that someone runs it.
+#
+# check-substrates.sh holds four substrates to one arithmetic: 801 golden
+# vectors, two conformance streams, the three-way agreement sequence, the
+# quilt state-hash corpus, the divergence study and the H4 recheck. Each has a
+# verified negative control, which is the part that makes green mean something.
+name: conformance
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  substrates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain versions
+        # Recorded because a byte-exact claim is a claim about a toolchain as
+        # much as about the code. If a checksum ever moves, this is the first
+        # thing to compare.
+        run: |
+          gcc --version | head -1
+          clang --version | head -1 || true
+          rustc --version
+          cargo --version
+          python3 --version
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            build/exact-band/target
+          key: cargo-${{ runner.os }}-${{ hashFiles('build/exact-band/Cargo.toml') }}
+
+      - name: Install Python deps
+        run: python3 -m pip install --quiet pytest
+
+      - name: Full cross-substrate check
+        run: ./build/check-substrates.sh
+
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Clippy, denying warnings
+        working-directory: build/exact-band
+        run: cargo clippy --all-targets --all-features -- -D warnings
+      - name: Rustfmt check
+        working-directory: build/exact-band
+        run: cargo fmt --check || echo "::warning::rustfmt differences (not gating)"
+      - name: C warnings as errors, two compilers, three standards
+        working-directory: build/exact-band-c
+        run: |
+          for cc in gcc clang; do
+            for std in c99 c11 c17; do
+              echo "== $cc -std=$std =="
+              $cc -std=$std -Wall -Wextra -Werror -pedantic -Wshadow \
+                  -Wconversion -Wsign-conversion -Wcast-qual \
+                  -Wstrict-prototypes -Wmissing-prototypes \
+                  -Wold-style-definition -O2 \
+                  -Isrc tests/test_exact_band.c src/exact_band.c -o /tmp/u_${cc}_${std}
+              /tmp/u_${cc}_${std} > /dev/null
+            done
+          done
+      - name: Sanitizers
+        working-directory: build/exact-band-c
+        run: |
+          gcc -std=c99 -O1 -fsanitize=undefined,address -fno-sanitize-recover=all \
+              -Isrc tests/test_exact_band.c src/exact_band.c -o /tmp/san_unit
+          /tmp/san_unit > /dev/null
+          gcc -std=c99 -O1 -fsanitize=undefined,address -fno-sanitize-recover=all \
+              -Isrc tests/conformance.c tests/json.c src/exact_band.c -o /tmp/san_conf
+          /tmp/san_conf tests/vectors.json > /dev/null
