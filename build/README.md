@@ -23,6 +23,10 @@ turn out to be worse than doubles. What the band actually buys is narrower and
 more defensible than "exact arithmetic is better", and it is measured rather than
 asserted.
 
+[`WIRE-FORMAT.md`](WIRE-FORMAT.md) is the canonical byte encoding — bijective on
+the value space, so hashing the bytes is equivalent to hashing the value, which
+is what provenance needs and what CBOR and Protobuf do not give you by default.
+
 Run `./check-substrates.sh` to hold all five projects to the same arithmetic in
 one command. It checks three things beyond the projects' own tests:
 

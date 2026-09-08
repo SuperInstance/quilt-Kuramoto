@@ -30,6 +30,7 @@ pub mod circular;
 pub mod covering;
 pub mod isqrt;
 pub mod lattice;
+pub mod wire;
 pub mod zono;
 
 pub use boxed::IBox;
