@@ -1,0 +1,269 @@
+{
+  "_": "Conformance corpus for the Quilt cell state hash. See reference.py.",
+  "spec": "type(1) || id(8 LE) || dials(16 x i16 LE) || neighbours(N x u64 LE); FNV-1a 64",
+  "cases": [
+    {
+      "name": "published",
+      "why": "the single cell every existing badge cites; kept so this corpus is a superset of what is already claimed",
+      "id": 1,
+      "dials": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "neighbours": [
+        2,
+        3,
+        4
+      ],
+      "bytes": 65,
+      "hash": "0xe435d91d6d92a1d8"
+    },
+    {
+      "name": "zero",
+      "why": "empty neighbour list and an all-zero body -- catches a port that special-cases emptiness or omits the length-zero tail",
+      "id": 0,
+      "dials": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "neighbours": [],
+      "bytes": 41,
+      "hash": "0xcd4d43fc56c209ac"
+    },
+    {
+      "name": "negative-dials",
+      "why": "every dial negative -- catches unsigned/signed confusion in Q1.15",
+      "id": 7,
+      "dials": [
+        -1,
+        -2,
+        -3,
+        -4,
+        -5,
+        -6,
+        -7,
+        -8,
+        -9,
+        -10,
+        -11,
+        -12,
+        -13,
+        -14,
+        -15,
+        -16
+      ],
+      "neighbours": [
+        1
+      ],
+      "bytes": 49,
+      "hash": "0x14653fe2e0f30f2a"
+    },
+    {
+      "name": "dial-extremes",
+      "why": "i16 endpoints -- catches clamping and off-by-one range checks",
+      "id": 9,
+      "dials": [
+        -32768,
+        32767,
+        -32768,
+        32767,
+        -32768,
+        32767,
+        -32768,
+        32767,
+        -32768,
+        32767,
+        -32768,
+        32767,
+        -32768,
+        32767,
+        -32768,
+        32767
+      ],
+      "neighbours": [
+        5
+      ],
+      "bytes": 49,
+      "hash": "0xb8773f336b5fb470"
+    },
+    {
+      "name": "alternating",
+      "why": "mixed signs -- catches sign handling that only works uniformly",
+      "id": 3,
+      "dials": [
+        1,
+        -2,
+        3,
+        -4,
+        5,
+        -6,
+        7,
+        -8,
+        9,
+        -10,
+        11,
+        -12,
+        13,
+        -14,
+        15,
+        -16
+      ],
+      "neighbours": [
+        9,
+        8,
+        7
+      ],
+      "bytes": 65,
+      "hash": "0x3267c2aa0b1ae8d9"
+    },
+    {
+      "name": "neighbour-order",
+      "why": "same neighbours as `published` in a DIFFERENT order; a port that sorts them will produce the published hash here and be wrong",
+      "id": 4,
+      "dials": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "neighbours": [
+        3,
+        2,
+        4
+      ],
+      "bytes": 65,
+      "hash": "0xa2e57baaf0e95ffd"
+    },
+    {
+      "name": "big-id",
+      "why": "u64 maximum -- catches a port using a signed or 32-bit id",
+      "id": 18446744073709551615,
+      "dials": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "neighbours": [
+        18446744073709551615
+      ],
+      "bytes": 49,
+      "hash": "0xf355296a65ebbc8c"
+    },
+    {
+      "name": "many-neighbours",
+      "why": "32 neighbours -- catches fixed-size buffers and length assumptions",
+      "id": 11,
+      "dials": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "neighbours": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32
+      ],
+      "bytes": 297,
+      "hash": "0xccda925d1ecf8f17"
+    }
+  ],
+  "stream": {
+    "algorithm": "xorshift64 seeded 0x2545F4914F6CDD1D; fold each cell's state hash with FNV-1a",
+    "10000": "0x77d4067c2ed7dbec"
+  }
+}
