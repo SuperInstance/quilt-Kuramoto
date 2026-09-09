@@ -60,11 +60,34 @@ from common import solve, report
 
 
 def c_div_nearest(n, d):
-    """int64_t eb_div_nearest(int64_t n, int64_t d), native BV64 (wrapping)
-    arithmetic, matching the -fwrapv-style compiled behaviour named above."""
+    """int64_t eb_div_nearest(int64_t n, int64_t d) AS NOW SHIPPED.
+
+    The overflow-free form. Nothing is doubled, so no intermediate can leave
+    int64: `q = n/d`, `r = n%d`, then adjust by comparing |r| against d - |r|.
+    Both sides of that comparison are non-negative and strictly below d.
+
+    The previous form, `(2*n + d) / (2*d)`, is the one this checker CAUGHT --
+    see c_div_nearest_overflowing below.
+    """
+    q = n / d                      # bvsdiv: truncates toward zero, like C's /
+    r = z3.SRem(n, d)              # C99 %: same sign as n
+    ar = -r
+    q = z3.If(r > 0, z3.If(r >= d - r, q + 1, q),
+        z3.If(r < 0, z3.If(ar >= d - ar, q - 1, q), q))
+    return q
+
+
+def c_div_nearest_overflowing(n, d):
+    """The form this checker found to be wrong, kept as the fail-first control.
+
+    `(2*n + d) / (2*d)` overflows for |n| past i64::MAX/2, and signed overflow
+    in C is UNDEFINED, not wrapping. Compiled with gcc -O2 it returned 0 for
+    n = i64::MAX and the wrong SIGN for n = 2^62. Modelled here with wrapping
+    BV64 arithmetic, which is what the hardware does once the compiler has
+    emitted the multiply."""
     two_n = n * 2
     two_d = d * 2
-    q_pos = (two_n + d) / two_d   # bvsdiv: truncates toward zero, like C's /
+    q_pos = (two_n + d) / two_d
     q_neg = (-two_n + d) / two_d
     return z3.If(n >= 0, q_pos, -q_neg)
 
@@ -94,7 +117,13 @@ def build_solver(bug, val_bits, timeout_ms):
     n64 = z3.BitVec("n", 64)
     d64 = z3.BitVec("d", 64)
     s = z3.Solver()
-    s.add(d64 != 0)  # division by zero excluded -- both languages trap/UB on it, not a value comparison
+    # d > 0 is the DOCUMENTED CONTRACT, not a convenience: `div_round` asserts
+    # it in both ports, and `eb_div_nearest`'s header says "divisor must be
+    # positive". Checking d < 0 would be checking behaviour neither port
+    # promises -- the two do diverge there, and both are equally entitled to.
+    # d == 0 is excluded because both trap or invoke UB rather than producing a
+    # value to compare.
+    s.add(d64 > 0)
     if val_bits < 63:
         lo, hi = -(1 << val_bits), (1 << val_bits) - 1
         s.add(n64 >= lo, n64 <= hi)

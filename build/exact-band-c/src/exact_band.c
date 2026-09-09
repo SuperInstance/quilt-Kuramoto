@@ -393,8 +393,34 @@ int64_t eb_phase_offset(uint32_t n, int64_t a, int64_t b)
  * the bug this repository already fixed once in the phase-lock centre pull. */
 int64_t eb_div_nearest(int64_t n, int64_t d)
 {
-    if (n >= 0) { return (2 * n + d) / (2 * d); }
-    return -((-2 * n + d) / (2 * d));
+    int64_t q = n / d;
+    int64_t r = n % d;      /* C99: same sign as n, and |r| < |d| */
+
+    /* Round half away from zero WITHOUT doubling anything.
+     *
+     * The obvious form, `(2*n + d) / (2*d)`, overflows for |n| beyond
+     * i64::MAX/2 -- and signed overflow in C is undefined, not merely
+     * wrapping. Compiled with gcc -O2 it returned 0 for n = i64::MAX and the
+     * WRONG SIGN for n = 2^62, where the Rust port (which widens to i128)
+     * returned the right answers. UBSan names it exactly:
+     *
+     *   signed integer overflow: 9223372036854775807 * 2 cannot be
+     *   represented in type 'long int'
+     *
+     * A bounded SMT equivalence check found this; the million-case
+     * conformance stream never could, because its inputs are bounded well
+     * inside the safe range. See ../smt-equivalence/.
+     *
+     * Comparing `|r| >= d - |r|` instead of `2*|r| >= d` is the same test with
+     * no doubling: both sides are non-negative and below d, so neither can
+     * overflow. */
+    if (r > 0) {
+        if (r >= d - r) { q += 1; }
+    } else if (r < 0) {
+        int64_t ar = -r;    /* safe: |r| < |d| <= INT64_MAX, so never INT64_MIN */
+        if (ar >= d - ar) { q -= 1; }
+    }
+    return q;
 }
 
 
