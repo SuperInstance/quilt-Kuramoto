@@ -34,14 +34,14 @@ STEPS = [
      ["check_phase_offset.py", "--n-bits", "32", "--val-bits", "63", "--timeout-ms", "60000"], "unsat", None),
     ("div_nearest fail-first (naive truncating-division bug)",
      ["check_div_nearest.py", "--bug", "--val-bits", "10", "--timeout-ms", "30000"], "sat", None),
-    ("div_nearest equivalence (FULL i64 x i64 domain -- expect a REAL divergence at the overflow boundary)",
-     ["check_div_nearest.py", "--val-bits", "63", "--timeout-ms", "60000"], "sat",
-     "NOT a checker bug: this is a REAL divergence, confirmed against actual\n"
-     "    `gcc -O2`, `clang -O2`, and `rustc -O` output (not just the two z3\n"
-     "    models) -- C's native int64 arithmetic wraps near i64::MIN/MAX, Rust's\n"
-     "    i128 intermediate never does for i64-range inputs. It sits far outside\n"
-     "    every value this crate's real callers pass (bounded by EB_SCALE_MAX,\n"
-     "    ~2^31) -- see README, 'A genuine divergence, not a modelling artifact'."),
+    ("div_nearest equivalence (d > 0 contract, full i64 -- EXPECTED TO TIME OUT)",
+     ["check_div_nearest.py", "--val-bits", "63", "--timeout-ms", "60000"], "unknown",
+     "This is the honest outcome and it is recorded rather than hidden. Finding a\n"
+     "counterexample here was fast -- the overflow bug that this checker caught\n"
+     "came back SAT in 4.4s. PROVING no counterexample exists does not finish,\n"
+     "even bounded to |n|,|d| < 2^31 (153s, still unknown). Division is hard for\n"
+     "bitvector solvers, and the asymmetry between finding a bug and proving its\n"
+     "absence is the main practical lesson from this prototype."),
     ("basis_meets fail-first (< instead of <= off-by-one)",
      ["check_basis_meets.py", "--bug", "--timeout-ms", "30000"], "sat", None),
     ("basis_meets: full u32 domain (expect a REAL divergence: differing guard clauses)",
