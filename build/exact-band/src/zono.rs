@@ -98,21 +98,71 @@ use crate::isqrt;
 /// accident would claim a dependency that does not exist and could make a band
 /// *too narrow*. A single counter is enough, and making it explicit means the
 /// caller can see how many independent error sources a computation introduced.
+/// Symbol ids are namespaced by ORIGIN, and that is a soundness requirement
+/// rather than a convenience.
+///
+/// Two peers each running their own pool both start at zero, so both mint 1,
+/// 2, 3… for *unrelated* error sources. Merge their forms and the algebra sees
+/// matching ids, treats those unrelated errors as the same quantity, and
+/// **cancels them**. Measured: two forms built from entirely independent
+/// measurements, each of radius 3300, subtract to radius **0** — the library
+/// reporting exact agreement between peers that share nothing at all.
+///
+/// A band that is too narrow is the only failure this crate genuinely cannot
+/// tolerate, because it is the one that says "these agree" when they do not.
+/// `with_origin` makes the collision impossible instead of documenting it.
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
-pub struct Symbols(u32);
+pub struct Symbols {
+    origin: u32,
+    counter: u32,
+}
 
 impl Symbols {
-    /// A fresh pool. Symbol 0 is never handed out, so it can mean "none".
-    pub const fn new() -> Self { Self(0) }
+    /// A pool for a **single process**, at origin 0.
+    ///
+    /// Safe only while every form that will ever meet was minted here. The
+    /// moment forms cross a process boundary, use [`Symbols::with_origin`].
+    pub const fn new() -> Self { Self { origin: 0, counter: 0 } }
 
-    /// Mint a symbol that has never been used by this pool.
-    pub fn fresh(&mut self) -> u32 {
-        self.0 += 1;
-        self.0
+    /// A pool namespaced to `origin`, so its ids cannot collide with any other
+    /// origin's.
+    ///
+    /// Ids are `(origin << 16) | counter`, which fits the existing `u32` id and
+    /// so needs no change to the wire format: 65 536 origins, 65 536 symbols
+    /// each. Give every peer a distinct origin and the cancellation above
+    /// cannot occur, because no two peers can ever produce the same id.
+    pub const fn with_origin(origin: u32) -> Self { Self { origin, counter: 0 } }
+
+    /// This pool's origin.
+    pub const fn origin(&self) -> u32 { self.origin }
+
+    /// Mint a symbol no pool with this origin has issued before.
+    ///
+    /// # Panics
+    /// If this origin's 65 536 symbols are exhausted. Wrapping would silently
+    /// reissue a live id and reintroduce exactly the cancellation this type
+    /// exists to prevent, so exhaustion is loud.
+    pub fn fresh(&mut self) -> u64 {
+        self.counter = self
+            .counter
+            .checked_add(1)
+            .expect("symbol pool exhausted for this origin; wrapping would reissue a live id");
+        (u64::from(self.origin) << 32) | u64::from(self.counter)
     }
 
-    /// How many symbols have been minted.
-    pub const fn minted(&self) -> u32 { self.0 }
+    /// How many symbols this pool has minted.
+    pub const fn minted(&self) -> u32 { self.counter }
+
+    /// Ensure this pool will never mint `id` or anything below it.
+    ///
+    /// Only ids from *this* origin can constrain it; another origin's ids are
+    /// unreachable here by construction, which is the point.
+    pub fn advance_past(&mut self, id: u64) {
+        if (id >> 32) as u32 == self.origin {
+            let low = (id & 0xFFFF_FFFF) as u32;
+            if low > self.counter { self.counter = low; }
+        }
+    }
 }
 
 /// An affine form over at most `K` noise symbols, with integer coefficients.
@@ -122,7 +172,7 @@ impl Symbols {
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Zono<const K: usize> {
     center: i64,
-    ids: [u32; K],
+    ids: [u64; K],
     coeffs: [i64; K],
     len: usize,
     condensations: u32,
@@ -131,7 +181,7 @@ pub struct Zono<const K: usize> {
 impl<const K: usize> Zono<K> {
     /// An exactly known value: no noise terms at all.
     pub const fn exact(center: i64) -> Self {
-        Self { center, ids: [0; K], coeffs: [0; K], len: 0, condensations: 0 }
+        Self { center, ids: [0u64; K], coeffs: [0; K], len: 0, condensations: 0 }
     }
 
     /// A value known to within `radius`, from a **new, independent** source.
@@ -154,7 +204,7 @@ impl<const K: usize> Zono<K> {
     /// This is how a shared measurement is expressed, and it is the whole point
     /// of the module: two values built from the same symbol will cancel exactly
     /// when subtracted.
-    pub fn from_symbol(center: i64, symbol: u32, coeff: i64) -> Self {
+    pub fn from_symbol(center: i64, symbol: u64, coeff: i64) -> Self {
         let mut z = Self::exact(center);
         if coeff != 0 && K > 0 {
             z.ids[0] = symbol;
@@ -201,12 +251,12 @@ impl<const K: usize> Zono<K> {
     /// not merely the interval: two substrates that condense differently can
     /// still agree on a width by coincidence, and the term list is where that
     /// coincidence stops.
-    pub fn term(&self, i: usize) -> Option<(u32, i64)> {
+    pub fn term(&self, i: usize) -> Option<(u64, i64)> {
         if i < self.len { Some((self.ids[i], self.coeffs[i])) } else { None }
     }
 
     /// The coefficient on `symbol`, or 0.
-    pub fn coeff_of(&self, symbol: u32) -> i64 {
+    pub fn coeff_of(&self, symbol: u64) -> i64 {
         let mut i = 0;
         while i < self.len {
             if self.ids[i] == symbol { return self.coeffs[i]; }

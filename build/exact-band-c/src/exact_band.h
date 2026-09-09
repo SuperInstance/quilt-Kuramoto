@@ -223,15 +223,43 @@ int64_t eb_div_nearest(int64_t n, int64_t d);
  * summed for the radius: 16 * 2^58 < 2^62. */
 #define EB_ZONO_COEF_MAX ((int64_t)288230376151711744)   /* 2^58 */
 
-/** Noise-symbol allocator. Symbol 0 is never issued, so it can mean "none". */
-typedef struct { uint32_t next; } eb_symbols_t;
+/** Noise-symbol allocator, NAMESPACED BY ORIGIN.
+ *
+ * The namespacing is a soundness requirement, not a convenience. Two peers each
+ * calling eb_symbols_init both start at zero and both mint 1, 2, 3... for
+ * UNRELATED error sources. Merge their forms and the algebra sees matching ids,
+ * treats those unrelated errors as the same quantity, and CANCELS them.
+ * Measured: two forms of radius 3300 built from entirely independent
+ * measurements subtract to radius 0 -- the library reporting exact agreement
+ * between peers that share nothing at all.
+ *
+ * A band too narrow is the one failure this algebra cannot tolerate, because it
+ * says "these agree" when they do not. Give each peer a distinct origin via
+ * eb_symbols_init_origin and the collision becomes impossible.
+ *
+ * Ids are (origin << 32) | counter: about four billion origins with four
+ * billion symbols each. A 16/16 split was tried first and was WRONG -- 65536
+ * symbols per origin exhausted inside one 200000-iteration conformance run,
+ * since every inexact operation mints one. Ids are varint-encoded on the wire,
+ * so widening costs nothing for small values and leaves every existing encoding
+ * byte-identical. */
+typedef struct { uint32_t origin; uint32_t counter; } eb_symbols_t;
 
-void     eb_symbols_init(eb_symbols_t *p);
-uint32_t eb_symbols_fresh(eb_symbols_t *p);
+/** A pool for a SINGLE PROCESS, at origin 0. Safe only while every form that
+ *  will ever meet was minted here. */
+void eb_symbols_init(eb_symbols_t *p);
+/** A pool namespaced to `origin`, whose ids cannot collide with any other. */
+void eb_symbols_init_origin(eb_symbols_t *p, uint32_t origin);
+/** Mint an id no pool with this origin has issued. Returns 0 -- never a valid
+ *  symbol -- on exhaustion, rather than wrapping and silently reissuing a live
+ *  id. */
+uint64_t eb_symbols_fresh(eb_symbols_t *p);
+/** Never mint `id` or below again, if and only if `id` is from this origin. */
+void eb_symbols_advance_past(eb_symbols_t *p, uint64_t id);
 
 typedef struct {
     int64_t  center;
-    uint32_t ids[EB_ZONO_CAP];      /**< sorted ascending */
+    uint64_t ids[EB_ZONO_CAP];      /**< sorted ascending */
     int64_t  coeffs[EB_ZONO_CAP];
     uint32_t len;
     uint32_t condensations;         /**< times tightness was given up */
@@ -240,7 +268,7 @@ typedef struct {
 /** An exactly known value. */
 void eb_zono_exact(eb_zono_t *z, int64_t center);
 /** A value whose uncertainty comes from an existing symbol. */
-void eb_zono_from_symbol(eb_zono_t *z, int64_t center, uint32_t sym, int64_t coeff);
+void eb_zono_from_symbol(eb_zono_t *z, int64_t center, uint64_t sym, int64_t coeff);
 /** A value known to within `radius`, from a new independent source. */
 void eb_zono_uncertain(eb_zono_t *z, int64_t center, uint32_t radius,
                        eb_symbols_t *pool);
@@ -250,7 +278,7 @@ int64_t eb_zono_radius(const eb_zono_t *z);
 /** The interval denoted, saturating at the int64 ends. */
 void eb_zono_interval(const eb_zono_t *z, int64_t *lo, int64_t *hi);
 /** Coefficient on `sym`, or 0. */
-int64_t eb_zono_coeff_of(const eb_zono_t *z, uint32_t sym);
+int64_t eb_zono_coeff_of(const eb_zono_t *z, uint64_t sym);
 
 /** Add an exact offset. */
 void eb_zono_shift(eb_zono_t *z, int64_t by);

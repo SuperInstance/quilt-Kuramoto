@@ -57,7 +57,7 @@ fn main() {
         let rounds: usize = std::env::args()
             .nth(1).and_then(|s| s.parse().ok()).unwrap_or(10);
         let mut pool = Symbols::new();
-        let syms: [u32; N] = core::array::from_fn(|_| pool.fresh());
+        let syms: [u64; N] = core::array::from_fn(|_| pool.fresh());
         let mut z: [F; N] = core::array::from_fn(|i| {
             Fixed::new(Z::from_symbol(CENTER as i64, syms[i], RADIUS as i64))
         });
@@ -86,7 +86,7 @@ fn main() {
     println!("  {:>4}  {:>12}  {:>12}  {:>12}", "t", "true", "zonotope", "box");
 
     let mut pool = Symbols::new();
-    let syms: [u32; N] = core::array::from_fn(|_| pool.fresh());
+    let syms: [u64; N] = core::array::from_fn(|_| pool.fresh());
     let mut z: [F; N] =
         core::array::from_fn(|i| Fixed::new(Z::from_symbol(CENTER as i64, syms[i], RADIUS as i64)));
 

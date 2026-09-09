@@ -176,7 +176,7 @@ pub fn write_zono<const K: usize>(w: &mut Writer, z: &Zono<K>) -> Result<(), Wir
     for i in 0..z.terms() {
         let (id, c) = z.term(i).ok_or(WireError::Truncated)?;
         if c == 0 { return Err(WireError::ZeroCoefficient); }
-        let id64 = u64::from(id);
+        let id64 = id;
         if i > 0 && id64 <= prev { return Err(WireError::TermsNotAscending); }
         w.varint(if i == 0 { id64 } else { id64 - prev - 1 })?;
         w.signed(c)?;
@@ -209,15 +209,14 @@ pub fn read_zono<const K: usize>(
             raw.checked_add(prev).and_then(|v| v.checked_add(1))
                 .ok_or(WireError::Overflow)?
         };
-        if id > u64::from(u32::MAX) { return Err(WireError::Overflow); }
         let c = r.signed()?;
         if c == 0 { return Err(WireError::ZeroCoefficient); }
-        out = out.add(Zono::<K>::from_symbol(0, id as u32, c), &mut scratch);
+        out = out.add(Zono::<K>::from_symbol(0, id, c), &mut scratch);
         prev = id;
     }
-    // Any symbol id seen here must never be minted again by `pool`.
-    while pool.minted() < prev as u32 {
-        pool.fresh();
-    }
+    // Any id from THIS pool's origin must never be minted again. Ids from a
+    // different origin cannot collide with ours at all, which is precisely what
+    // namespacing buys.
+    pool.advance_past(prev);
     Ok(out)
 }

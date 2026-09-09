@@ -246,7 +246,7 @@ fn the_case_where_zonotopes_lose_is_pinned_too() {
     // be quietly claimed away later, and so a real fix shows up as a failure
     // here rather than going unnoticed.
     let mut pool = Symbols::new();
-    let syms: [u32; 3] = [pool.fresh(), pool.fresh(), pool.fresh()];
+    let syms: [u64; 3] = [pool.fresh(), pool.fresh(), pool.fresh()];
     let mut z: [Z; 3] = core::array::from_fn(|i| Z::from_symbol(1000, syms[i], 12));
     for _ in 0..8 {
         let prev = z;
@@ -279,7 +279,7 @@ fn scaling_removes_the_rounding_that_made_zonotopes_lose() {
     // the /4 is a change of exponent rather than a division, so nothing rounds
     // and nothing is minted -- the width stays exactly true.
     let mut pool = Symbols::new();
-    let syms: [u32; 3] = [pool.fresh(), pool.fresh(), pool.fresh()];
+    let syms: [u64; 3] = [pool.fresh(), pool.fresh(), pool.fresh()];
     let mut z: [F; 3] =
         core::array::from_fn(|i| Fixed::new(Z::from_symbol(1000, syms[i], 12)));
     for _ in 0..8 {
@@ -303,7 +303,7 @@ fn only_a_zonotope_can_conclude_that_two_nodes_agree() {
     // The operation this crate exists for. After consensus, x0 - x1 collapses
     // toward zero. Interval arithmetic cannot see it at any number of rounds.
     let mut pool = Symbols::new();
-    let syms: [u32; 3] = [pool.fresh(), pool.fresh(), pool.fresh()];
+    let syms: [u64; 3] = [pool.fresh(), pool.fresh(), pool.fresh()];
     let mut z: [F; 3] =
         core::array::from_fn(|i| Fixed::new(Z::from_symbol(1000, syms[i], 12)));
 
@@ -381,7 +381,7 @@ fn condensation_must_never_narrow_a_difference_of_shared_forms() {
     // -- to surface. It is kept as the readable statement of the property; the
     // sweep is the one with teeth.
     let mut pool = Symbols::new();
-    let shared: [u32; 4] = [pool.fresh(), pool.fresh(), pool.fresh(), pool.fresh()];
+    let shared: [u64; 4] = [pool.fresh(), pool.fresh(), pool.fresh(), pool.fresh()];
 
     // Build two forms over the same sources, forcing the small one to condense.
     let mut small_a = Zono::<4>::exact(500);
@@ -449,4 +449,91 @@ fn sweep_width<const K: usize>(n: usize, fresh: bool) -> (i128, u32) {
     }
     let d = z[0].sub(z[1], &mut pool);
     (1000 * d.width_scaled() / (1i128 << d.shift()), d.numerator().condensations())
+}
+
+// ---- the multi-peer hazard, and the fix -----------------------------------
+
+#[test]
+fn two_pools_at_the_same_origin_cancel_unrelated_errors() {
+    // THE HAZARD, pinned. Two peers each running `Symbols::new()` both start at
+    // zero and both mint 1, 2, 3… for unrelated sources. Merging their forms
+    // makes the algebra cancel errors that share nothing, and the band comes out
+    // too NARROW — the library reporting agreement between peers with no common
+    // measurement at all.
+    //
+    // This test asserts the WRONG behaviour on purpose, so that it is recorded
+    // rather than latent, and so that anyone who "fixes" `new()` to namespace
+    // itself sees this fail and reads why.
+    let mut pa = Symbols::new();
+    let mut pb = Symbols::new();
+    let mut a = Z::exact(0);
+    let mut b = Z::exact(0);
+    for _ in 0..(2 * 16 + 1) {
+        let sa = pa.fresh();
+        let sb = pb.fresh();
+        a = a.add(Z::from_symbol(0, sa, 100), &mut pa);
+        b = b.add(Z::from_symbol(0, sb, 100), &mut pb);
+    }
+    let sound = a.radius() + b.radius();
+    let got = a.sub(b, &mut pa).radius();
+    assert!(got < sound,
+        "documenting the hazard: same-origin pools collide, {got} < {sound}");
+    assert_eq!(got, 0, "and in this configuration they cancel completely");
+}
+
+#[test]
+fn distinct_origins_make_the_collision_impossible() {
+    // THE FIX. Give each peer its own origin and no two can ever mint the same
+    // id, so independent errors ADD, as they must.
+    let mut pa = Symbols::with_origin(1);
+    let mut pb = Symbols::with_origin(2);
+    let mut a = Z::exact(0);
+    let mut b = Z::exact(0);
+    for _ in 0..(2 * 16 + 1) {
+        let sa = pa.fresh();
+        let sb = pb.fresh();
+        a = a.add(Z::from_symbol(0, sa, 100), &mut pa);
+        b = b.add(Z::from_symbol(0, sb, 100), &mut pb);
+    }
+    let sound = a.radius() + b.radius();
+    let got = a.sub(b, &mut pa).radius();
+    assert_eq!(got, sound,
+        "independent measurements from distinct origins must add, not cancel");
+    assert!(got > 0);
+}
+
+#[test]
+fn origins_partition_the_id_space_completely() {
+    // The property the fix rests on: no id from one origin is reachable from
+    // another, whatever either does.
+    for origin in [0u32, 1, 2, 41, u32::MAX] {
+        let mut p = Symbols::with_origin(origin);
+        for _ in 0..64 {
+            let id = p.fresh();
+            assert_eq!((id >> 32) as u32, origin, "id {id} escaped its origin");
+            assert_ne!(id & 0xFFFF_FFFF, 0, "counter 0 is never issued");
+        }
+    }
+    // Two different origins share no id at all.
+    let mut p1 = Symbols::with_origin(7);
+    let mut p2 = Symbols::with_origin(8);
+    let ids1: Vec<u64> = (0..500).map(|_| p1.fresh()).collect();
+    let ids2: Vec<u64> = (0..500).map(|_| p2.fresh()).collect();
+    for a in &ids1 {
+        assert!(!ids2.contains(a), "id {a} issued by both origins");
+    }
+}
+
+#[test]
+fn advance_past_only_listens_to_its_own_origin() {
+    // Decoding must not let a foreign origin's ids push our counter forward:
+    // they cannot collide with ours, so reacting to them would waste the space
+    // and, at the limit, force a spurious exhaustion panic.
+    let mut p = Symbols::with_origin(3);
+    let before = p.minted();
+    p.advance_past((9u64 << 32) | 60000); // a different origin, high counter
+    assert_eq!(p.minted(), before, "a foreign origin must not move our counter");
+    p.advance_past((3u64 << 32) | 40);    // our own origin
+    assert_eq!(p.minted(), 40);
+    assert_eq!(p.fresh(), (3u64 << 32) | 41);
 }

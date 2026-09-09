@@ -45,7 +45,7 @@ fn main() {
 
     // Zonotope state: one shared symbol per node's reading.
     let mut pool = Symbols::new();
-    let syms: [u32; N] = core::array::from_fn(|_| pool.fresh());
+    let syms: [u64; N] = core::array::from_fn(|_| pool.fresh());
     let mut z: [Z; N] = core::array::from_fn(|i| Z::from_symbol(centers[i], syms[i], radius));
 
     // Interval state: the same values, as boxes.

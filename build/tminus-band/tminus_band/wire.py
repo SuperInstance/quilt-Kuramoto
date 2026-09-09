@@ -155,8 +155,8 @@ def read_zono(data: bytes, pool: Symbols) -> Zono:
         terms.append((sid, c))
         prev = sid
     r.finish()
-    # Any id seen here must never be minted again: a collision would assert a
-    # dependency that does not exist and could make a later band too narrow.
-    while pool.next < prev:
-        pool.fresh()
+    # Any id from THIS pool's origin must never be minted again. Ids from a
+    # different origin cannot collide with ours at all, which is what
+    # namespacing buys.
+    pool.advance_past(prev)
     return Zono(center=center, terms=terms, condensations=0)

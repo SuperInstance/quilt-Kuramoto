@@ -424,12 +424,27 @@ int64_t eb_div_nearest(int64_t n, int64_t d)
 }
 
 
-void eb_symbols_init(eb_symbols_t *p) { p->next = 0u; }
+void eb_symbols_init(eb_symbols_t *p) { p->origin = 0u; p->counter = 0u; }
 
-uint32_t eb_symbols_fresh(eb_symbols_t *p)
+void eb_symbols_init_origin(eb_symbols_t *p, uint32_t origin)
 {
-    p->next += 1u;
-    return p->next;
+    p->origin = origin;
+    p->counter = 0u;
+}
+
+uint64_t eb_symbols_fresh(eb_symbols_t *p)
+{
+    if (p->counter == 0xFFFFFFFFu) { return 0u; }   /* exhausted: never wrap */
+    p->counter += 1u;
+    return ((uint64_t)p->origin << 32) | (uint64_t)p->counter;
+}
+
+void eb_symbols_advance_past(eb_symbols_t *p, uint64_t id)
+{
+    if ((uint32_t)(id >> 32) == p->origin) {
+        uint32_t low = (uint32_t)(id & 0xFFFFFFFFu);
+        if (low > p->counter) { p->counter = low; }
+    }
 }
 
 void eb_zono_exact(eb_zono_t *z, int64_t center)
@@ -439,7 +454,7 @@ void eb_zono_exact(eb_zono_t *z, int64_t center)
     z->condensations = 0u;
 }
 
-void eb_zono_from_symbol(eb_zono_t *z, int64_t center, uint32_t sym, int64_t coeff)
+void eb_zono_from_symbol(eb_zono_t *z, int64_t center, uint64_t sym, int64_t coeff)
 {
     eb_zono_exact(z, center);
     if (coeff != 0) {
@@ -500,7 +515,7 @@ void eb_zono_interval(const eb_zono_t *z, int64_t *lo, int64_t *hi)
     if (hi != 0) { *hi = sat_add(z->center, r); }
 }
 
-int64_t eb_zono_coeff_of(const eb_zono_t *z, uint32_t sym)
+int64_t eb_zono_coeff_of(const eb_zono_t *z, uint64_t sym)
 {
     uint32_t i;
     for (i = 0u; i < z->len; i++) {
@@ -554,7 +569,7 @@ static void absorb_spill(eb_zono_t *z, int64_t spilled, eb_symbols_t *pool)
      * id is the largest yet minted, so one upward pass carries it to the end. */
     for (k = 1u; k < z->len; k++) {
         if (z->ids[k - 1u] > z->ids[k]) {
-            uint32_t ti = z->ids[k - 1u];
+            uint64_t ti = z->ids[k - 1u];
             int64_t  tc = z->coeffs[k - 1u];
             z->ids[k - 1u] = z->ids[k];
             z->coeffs[k - 1u] = z->coeffs[k];
@@ -577,7 +592,7 @@ static void merge(eb_zono_t *out, const eb_zono_t *a, const eb_zono_t *b,
     tmp.condensations = a->condensations + b->condensations;
 
     while (i < a->len || j < b->len) {
-        uint32_t id;
+        uint64_t id;
         int64_t c;
         if (j >= b->len || (i < a->len && a->ids[i] < b->ids[j])) {
             id = a->ids[i]; c = a->coeffs[i]; i++;
@@ -879,17 +894,17 @@ eb_wire_err_t eb_wire_read_zono(eb_reader_t *r, eb_zono_t *out,
             if (raw > UINT64_MAX - prev - 1u) { return EB_WIRE_OVERFLOW; }
             id = raw + prev + 1u;
         }
-        if (id > 0xFFFFFFFFu) { return EB_WIRE_OVERFLOW; }
         e = r_signed(r, &c);
         if (e != EB_WIRE_OK) { return e; }
         if (c == 0) { return EB_WIRE_ZERO_COEFFICIENT; }
-        out->ids[out->len] = (uint32_t)id;
+        out->ids[out->len] = id;
         out->coeffs[out->len] = c;
         out->len++;
         prev = id;
     }
-    /* Any id seen here must never be minted again: a collision would assert a
-     * dependency that does not exist and could make a later band too narrow. */
-    while (pool->next < (uint32_t)prev) { (void)eb_symbols_fresh(pool); }
+    /* Any id from THIS pool's origin must never be minted again. Ids from a
+     * different origin cannot collide with ours, which is what namespacing
+     * buys. */
+    eb_symbols_advance_past(pool, prev);
     return EB_WIRE_OK;
 }

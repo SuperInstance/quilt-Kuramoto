@@ -174,7 +174,7 @@ static uint64_t step(uint64_t h)
 
 #define ZSHARED 4
 
-static uint64_t zono_step(uint64_t h, eb_zono_t *acc, const uint32_t *shared,
+static uint64_t zono_step(uint64_t h, eb_zono_t *acc, const uint64_t *shared,
                           eb_symbols_t *pool)
 {
     uint64_t scale = SCALES[next_u64() % 4u];
@@ -222,7 +222,7 @@ static uint64_t zono_step(uint64_t h, eb_zono_t *acc, const uint32_t *shared,
     h = mix(h, (uint64_t)acc->len);
     h = mix(h, (uint64_t)acc->condensations);
     for (i = 0u; i < acc->len; i++) {
-        h = mix(h, (uint64_t)acc->ids[i]);
+        h = mix(h, acc->ids[i]);
         h = mix(h, bits_i64(acc->coeffs[i]));
     }
     return h;
@@ -233,7 +233,7 @@ static uint64_t run_zono(unsigned long iters)
     uint64_t h = H0;
     eb_symbols_t pool;
     eb_zono_t acc;
-    uint32_t shared[ZSHARED];
+    uint64_t shared[ZSHARED];
     unsigned long i;
     uint32_t k;
 
@@ -258,7 +258,7 @@ static void run_agreement(unsigned long rounds)
     eb_symbols_t pool;
     eb_fixed_t z[3], prev[3], d, t;
     eb_zono_t seed;
-    uint32_t syms[3];
+    uint64_t syms[3];
     unsigned long r;
     int i;
 
@@ -346,13 +346,13 @@ static void run_wire(void)
 
     eb_zono_exact(&acc, -5);
     for (i = 1; i <= 5; i++) {
-        eb_zono_from_symbol(&t, 0, (uint32_t)i, (int64_t)i * 100 * ((i % 2 == 0) ? -1 : 1));
+        eb_zono_from_symbol(&t, 0, (uint64_t)i, (int64_t)i * 100 * ((i % 2 == 0) ? -1 : 1));
         eb_zono_add(&acc, &acc, &t, &pool);
     }
     wire_zono("zono/consecutive", &acc);
 
     {
-        static const uint32_t ids[4] = { 1u, 1000u, 70000u, 4000000000u };
+        static const uint64_t ids[4] = { 1u, 1000u, 70000u, 4000000000u };
         eb_zono_exact(&acc, 7);
         for (i = 0; i < 4; i++) {
             eb_zono_from_symbol(&t, 0, ids[i], (int64_t)(ids[i] % 977u) + 1);
@@ -363,7 +363,7 @@ static void run_wire(void)
 
     eb_zono_exact(&acc, 1);
     for (k = 1u; k <= 16u; k++) {
-        eb_zono_from_symbol(&t, 0, k * 3u, (int64_t)k - 8);
+        eb_zono_from_symbol(&t, 0, (uint64_t)k * 3u, (int64_t)k - 8);
         eb_zono_add(&acc, &acc, &t, &pool);
     }
     wire_zono("zono/full", &acc);

@@ -51,7 +51,7 @@ fn main() {
     let mut multi = Z::exact(-5);
     for k in 1..=5i64 {
         multi = multi.add(
-            Z::from_symbol(0, k as u32, k * 100 * if k % 2 == 0 { -1 } else { 1 }),
+            Z::from_symbol(0, k as u64, k * 100 * if k % 2 == 0 { -1 } else { 1 }),
             &mut pool,
         );
     }
@@ -59,15 +59,15 @@ fn main() {
 
     // Sparse ids exercise large deltas.
     let mut sparse = Z::exact(7);
-    for k in [1u32, 1000, 70_000, 4_000_000_000] {
-        sparse = sparse.add(Z::from_symbol(0, k, i64::from(k) % 977 + 1), &mut pool);
+    for k in [1u64, 1000, 70_000, 4_000_000_000] {
+        sparse = sparse.add(Z::from_symbol(0, k, (k % 977) as i64 + 1), &mut pool);
     }
     emit_zono("zono/sparse", &sparse);
 
     // Full capacity.
     let mut full = Z::exact(1);
-    for k in 1..=16u32 {
-        full = full.add(Z::from_symbol(0, k * 3, i64::from(k) - 8), &mut pool);
+    for k in 1..=16u64 {
+        full = full.add(Z::from_symbol(0, k * 3, k as i64 - 8), &mut pool);
     }
     emit_zono("zono/full", &full);
 }

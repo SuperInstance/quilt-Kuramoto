@@ -53,7 +53,7 @@ fn zonotope_round_trips_and_preserves_every_term() {
     let mut pool = Symbols::new();
     let mut z = Z::exact(-4242);
     for k in 1..=8i64 {
-        z = z.add(Z::from_symbol(0, k as u32 * 3, k * 17 * if k % 2 == 0 { -1 } else { 1 }),
+        z = z.add(Z::from_symbol(0, k as u64 * 3, k * 17 * if k % 2 == 0 { -1 } else { 1 }),
                   &mut pool);
     }
     let bytes = enc_zono(&z);

@@ -57,19 +57,62 @@ def div_nearest(n: int, d: int) -> int:
 
 
 class Symbols:
-    """Noise-symbol allocator. Symbol 0 is never issued, so it can mean 'none'."""
+    """Noise-symbol allocator, **namespaced by origin**.
 
-    __slots__ = ("next",)
+    The namespacing is a soundness requirement, not a convenience. Two peers
+    each constructing ``Symbols()`` both start at zero and both mint 1, 2, 3…
+    for *unrelated* error sources. Merge their forms and the algebra sees
+    matching ids, treats those unrelated errors as the same quantity, and
+    **cancels them**. Measured: two forms of radius 3300 built from entirely
+    independent measurements subtract to radius **0** — the library reporting
+    exact agreement between peers that share nothing.
 
-    def __init__(self) -> None:
-        self.next = 0
+    A band too narrow is the one failure this algebra cannot tolerate, because
+    it says "these agree" when they do not. Give each peer a distinct
+    ``origin`` and the collision becomes impossible rather than documented.
+
+    Ids are ``(origin << 32) | counter``: about four billion origins with four
+    billion symbols each. A 16/16 split was tried first and was wrong — 65 536
+    symbols per origin exhausted inside a single 200 000-iteration conformance
+    run, since every inexact operation mints one. Ids are varint-encoded on the
+    wire, so widening costs nothing for small values and leaves every existing
+    encoding byte-identical.
+    """
+
+    __slots__ = ("origin", "counter")
+
+    def __init__(self, origin: int = 0) -> None:
+        if not 0 <= origin <= 0xFFFFFFFF:
+            raise ValueError("origin must fit in 32 bits")
+        self.origin = origin
+        self.counter = 0
 
     def fresh(self) -> int:
-        self.next += 1
-        return self.next
+        """Mint an id no pool with this origin has issued before.
+
+        Raises on exhaustion rather than wrapping: wrapping would silently
+        reissue a live id and reintroduce the very cancellation this exists to
+        prevent.
+        """
+        if self.counter >= 0xFFFFFFFF:
+            raise OverflowError(
+                "symbol pool exhausted for this origin; wrapping would reissue a live id")
+        self.counter += 1
+        return (self.origin << 32) | self.counter
 
     def minted(self) -> int:
-        return self.next
+        return self.counter
+
+    def advance_past(self, sid: int) -> None:
+        """Never mint `sid` or below again — but only if it is ours.
+
+        Ids from another origin cannot collide with ours by construction, so
+        reacting to them would waste this origin's space for nothing.
+        """
+        if (sid >> 32) == self.origin:
+            low = sid & 0xFFFFFFFF
+            if low > self.counter:
+                self.counter = low
 
 
 @dataclass

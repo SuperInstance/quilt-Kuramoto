@@ -51,7 +51,7 @@ fn main() {
     let iters: u64 = std::env::args().nth(1).and_then(|s| s.parse().ok()).unwrap_or(50_000);
     let mut rng = Rng(SEED);
     let mut pool = Symbols::new();
-    let shared: [u32; SHARED] = core::array::from_fn(|_| pool.fresh());
+    let shared: [u64; SHARED] = core::array::from_fn(|_| pool.fresh());
     let mut acc = Z::exact(0);
     let mut h = H0;
 
@@ -84,7 +84,7 @@ fn main() {
         h = mix(h, u64::from(acc.condensations()));
         for i in 0..acc.terms() {
             let (id, c) = acc.term(i).expect("term index within length");
-            h = mix(h, u64::from(id));
+            h = mix(h, id);
             h = mix(h, c as u64);
         }
     }
