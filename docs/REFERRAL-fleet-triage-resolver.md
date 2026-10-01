@@ -42,6 +42,12 @@ Boundary notes (honest limits, carried from the family triage digest):
 
 ## Sibling edges (same source run)
 
+- Source-side twin: `docs/REFERRAL-quilt-kuramoto.md` in fleet-triage
+  (PR fleet-triage#3, OPEN) — deeper read of this repo's census row: the 253 FM
+  independently cross-checks this repo's own docs/MISSING.md archival-loss list
+  (12/12 spot-verified absent), and the fixable class is the 264 AMBIGUOUS
+  bare-basename citations (8/8 spot-verified multi-repo → basename-pinning
+  doc-lint sweep). This pair = the edge's two filing surfaces, source + target.
 - `fleet-triage-resolver -> quilt-research-canons` — 222 FILE_MISSING surface
   (PR quilt-research-canons#5, OPEN).
 - `fleet-triage-resolver -> quilt-tournament` — sole holder of all 25
